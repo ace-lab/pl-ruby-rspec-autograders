@@ -1,0 +1,12 @@
+{
+    "gradable": true,
+    "tests": [
+        {
+            "name": "Customer notifies the customer of a successful payment",
+            "output": "Variant \"Var 1\" : Failed as intended\n",
+            "points": 1,
+            "max_points": 1
+        }
+    ],
+    "score": 1.0
+}

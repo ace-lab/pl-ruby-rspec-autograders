@@ -1,0 +1,13 @@
+{
+    "submission_file": "spec/my_spec.rb",
+    "submission_root": "",
+    "pre-text": "describe GiftCard do\n", 
+    "post-text": "end\n",
+    "grading_exclusions" : {
+        "var_1" : [
+            "GiftCard succeeds with positive balance"
+        ],
+        "var_2" : [],
+        "var_3" : []
+    }
+}

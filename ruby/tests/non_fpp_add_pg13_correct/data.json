@@ -1,0 +1,11 @@
+{
+    "submitted_answers" : {
+        "_files" : [
+            {
+                "name" : "script.rb",
+                "contents" : "Y2xhc3MgTW92aWUgPCBBY3RpdmVSZWNvcmQ6OkJhc2UKICB2YWxpZGF0ZSA6cmF0aW5nX2NvbnNpc3RlbnRfd2l0aF9kYXRlCiAgZGVmIHJhdGluZ19jb25zaXN0ZW50X3dpdGhfZGF0ZSgpCiAgICBwZzEzX2ludmVudGVkID0gVGltZS5wYXJzZSAiMSBKYW4gMTk4NCIKICAgIGlmIChwZzEzX2ludmVudGVkID4gc2VsZi5yZWxlYXNlX2RhdGUpIGFuZCAoc2VsZi5yYXRpbmcgPT0gJ1BHLTEzJykKICAgICAgIHNlbGYuZXJyb3JzLmFkZCg6cmF0aW5nLCAnb25seSB2YWxpZCBmb3IgMTk4NCBhbmQgbGF0ZXInKQogICAgZW5kCiAgZW5kCmVuZAo="
+            }
+        ]
+    },
+    "gradable": true
+}

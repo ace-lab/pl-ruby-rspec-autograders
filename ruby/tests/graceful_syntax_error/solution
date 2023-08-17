@@ -1,0 +1,7 @@
+
+def halve(arg)
+    int = Integer(arg)
+    int / 2
+rescue
+    raise ArgumentError("Argument must be convertible to an Integer")
+end

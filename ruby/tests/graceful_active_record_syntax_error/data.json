@@ -1,0 +1,6 @@
+{
+    "submitted_answers" : {
+        "student-parsons-solution": "class Movie < ActiveRecord::Base\n  ???validate :rating_consistent_with_date\n  def rating_consistent_with_date()\n  end\nend\n"
+    },
+    "gradable": true
+}

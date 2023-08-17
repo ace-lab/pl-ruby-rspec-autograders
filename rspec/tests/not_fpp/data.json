@@ -1,0 +1,12 @@
+{
+    "submitted_answers": {
+        "_files": [
+          {
+            "name": "user_code.py",
+            "contents": "ZGVzY3JpYmUgR2lmdENhcmQgZG8KCml0ICdmYWlscyB0byBpbnN0YW50aWF0ZSB3aXRoIG5lZ2F0aXZlIGJhbGFuY2UnIGRvCiAgZXhwZWN0IHsgR2lmdENhcmQubmV3KC0xKSB9LnRvIHJhaXNlX2Vycm9yKEFyZ3VtZW50RXJyb3IpCmVuZAppdCAnc3VjY2Vzc2Z1bGx5IGFzc2lnbnMgYSBwb3NpdGl2ZSBiYWxhbmNlIG9uIGluc3RhbnRpYXRpb24nIGRvCiAgZ2lmdF9jYXJkID0gR2lmdENhcmQubmV3KDIwKQogIGV4cGVjdChnaWZ0X2NhcmQuYmFsYW5jZSkudG8gZXEoMjApCmVuZAoKZW5kCg=="
+          }
+        ]
+    },
+    "gradable": true
+}
+

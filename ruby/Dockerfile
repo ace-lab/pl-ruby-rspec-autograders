@@ -1,0 +1,17 @@
+FROM ruby:2.6-alpine3.13
+
+RUN apk update 
+RUN apk upgrade
+RUN apk add bash ruby-dev
+RUN apk add --no-cache python3
+
+RUN apk add --no-cache ruby ruby-bundler build-base
+
+RUN gem install json rspec rake
+RUN gem update --system 2.7.10
+
+RUN mkdir /grader
+COPY grader /grader
+RUN chmod +x /grader/run.py
+
+CMD sh

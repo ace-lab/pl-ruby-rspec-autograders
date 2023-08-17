@@ -1,0 +1,7 @@
+{
+    "submitted_answers" : {
+        "student-parsons-solution": "def halve(arg)\n  arg /\\ 2\nend"
+    },
+    "gradable": true
+}
+

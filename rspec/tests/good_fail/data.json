@@ -1,0 +1,8 @@
+{
+    "submitted_answers" : {
+        "student-parsons-solution": "it 'fails with negative balance' do\r\n  expect { GiftCard.new(-1) }.to raise_error(ArgumentError)\r\nend\r\n"
+    },
+    "gradable": true
+}
+
+

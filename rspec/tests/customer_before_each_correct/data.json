@@ -1,0 +1,7 @@
+{
+    "submitted_answers" : {
+        "student-parsons-solution": "before(:each) do #0given\n@loaded_gift_card = double('gift_card')\n@customer = Customer.new('Student', @loaded_gift_card)\nend\nit 'notifies customer if balance covers payment' do\nallow(@loaded_gift_card).to receive(:withdraw).and_return(true)\nexpect(@customer).to receive(:notify).with('payment successful')\n@customer.pay(10)\nend\nit 'notifies customer if balance does not cover payment' do\nallow(@loaded_gift_card).to receive(:withdraw).and_return(nil)\nexpect(@customer).to receive(:notify).with('purchase cannot be completed')\n@customer.pay(10)\nend"
+    },
+    "gradable": true
+}
+

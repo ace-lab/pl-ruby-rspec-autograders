@@ -1,0 +1,6 @@
+{
+    "submitted_answers" : {
+        "student-parsons-solution": "class Movie < ActiveRecord::Base\n  validate :rating_consistent_with_date\n  def rating_consistent_with_date()\n    pg13_invented = Time.parse \"1 Jan 1984\"\n    if (pg13_invented > self.release_date) and (self.rating == 'PG-13')\n       self.errors.add(:rating, 'only valid for 1984 and later')\n    end\n  end\nend\n"
+    },
+    "gradable": true
+}

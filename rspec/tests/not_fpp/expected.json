@@ -1,0 +1,18 @@
+{
+    "gradable": true,
+    "tests": [
+        {
+            "name": "GiftCard fails to instantiate with negative balance",
+            "output": "Variant \"Wrong withdraw check\" : Failed as intended\n",
+            "points": 1,
+            "max_points": 1
+        },
+        {
+            "name": "GiftCard successfully assigns a positive balance on instantiation",
+            "output": "Variant \"Initialize balance incorrectly\" : Failed as intended\n",
+            "points": 1,
+            "max_points": 1
+        }
+    ],
+    "score": 1.0
+}

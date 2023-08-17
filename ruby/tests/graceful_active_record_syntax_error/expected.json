@@ -1,0 +1,19 @@
+{
+    "gradable": false,
+    "format_errors" : [],
+    "tests": [
+        {
+            "name": "movie validation gives error if pre-1984 movie has PG-13 rating",
+            "output": "Failed: \n(#<ActiveRecord::Base::Errors:0x00007fd5815d8c58>).add(:rating, \"only valid for 1984 and later\")\n    expected: 1 time with arguments: (:rating, \"only valid for 1984 and later\")\n    received: 0 times \n",
+            "points": 0,
+            "max_points": 1
+        },
+        {
+            "name": "movie validation validates if post-1984 movie has PG-13 rating",
+            "output": "Passed.",
+            "points": 1,
+            "max_points": 1
+        }
+    ],
+    "score": 0.5
+}

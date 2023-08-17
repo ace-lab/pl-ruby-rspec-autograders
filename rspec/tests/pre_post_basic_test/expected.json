@@ -1,0 +1,12 @@
+{
+    "gradable": true, 
+    "tests": [
+        {
+            "name": "even? should return true on even numbers", 
+            "output": "Variant \"Case one\" : Should fail but passed\nVariant \"Case two\" : Should fail but passed\n", 
+            "points": 0, 
+            "max_points": 2
+        }
+    ], 
+    "score": 0.0
+}

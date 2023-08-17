@@ -1,0 +1,43 @@
+{
+    "params": {
+      "random_number": 0.06564160947926911
+    },
+    "correct_answers": {},
+    "submitted_answers": {
+      "_files": [
+        {
+          "name": "user_code.py",
+          "contents": "ZGVzY3JpYmUgJ2xlYXBfeWVhcicgZG8NCml0ICdzaG91bGQgcmV0dXJuIHRydWUgb24gMjAwNCcgZG8NCmV4cGVjdChsZWFwX3llYXIoMjAwNCkpLnRvIGVxKHRydWUpDQplbmQNCmVuZA0K"
+        }
+      ],
+      "starter-code-order": "[]",
+      "parsons-solution-order": "[{\"id\":\"parsons-solutioncodeline0\",\"indent\":\"0px\",\"index\":0},{\"id\":\"parsons-solutioncodeline1\",\"indent\":\"50px\",\"index\":1},{\"id\":\"parsons-solutioncodeline2\",\"indent\":\"100px\",\"index\":2},{\"id\":\"parsons-solutioncodeline3\",\"indent\":\"50px\",\"index\":3},{\"id\":\"parsons-solutioncodeline4\",\"indent\":\"0px\",\"index\":4}]",
+      "student-parsons-solution": "         (2..10).step(2).each do |n|\r\n             expect(even?(n)).to eq false\r\n         end\r\n",
+      "parsons-solutioncodeline0-0": "describe",
+      "parsons-solutioncodeline1-0": "true",
+      "parsons-solutioncodeline1-1": "2004",
+      "parsons-solutioncodeline2-0": "expect",
+      "parsons-solutioncodeline2-1": "2004",
+      "parsons-solutioncodeline2-2": "to",
+      "parsons-solutioncodeline2-3": "true"
+    },
+    "format_errors": {},
+    "partial_scores": {},
+    "score": 0,
+    "feedback": {},
+    "variant_seed": 2517894581,
+    "options": {},
+    "raw_submitted_answers": {
+      "starter-code-order": "[]",
+      "parsons-solution-order": "[{\"id\":\"parsons-solutioncodeline0\",\"indent\":\"0px\",\"index\":0},{\"id\":\"parsons-solutioncodeline1\",\"indent\":\"50px\",\"index\":1},{\"id\":\"parsons-solutioncodeline2\",\"indent\":\"100px\",\"index\":2},{\"id\":\"parsons-solutioncodeline3\",\"indent\":\"50px\",\"index\":3},{\"id\":\"parsons-solutioncodeline4\",\"indent\":\"0px\",\"index\":4}]",
+      "student-parsons-solution": "         (2..10).step(2).each do |n|\r\n             expect(even?(n)).to eq false\r\n         end\r\n",
+      "parsons-solutioncodeline0-0": "describe",
+      "parsons-solutioncodeline1-0": "true",
+      "parsons-solutioncodeline1-1": "2004",
+      "parsons-solutioncodeline2-0": "expect",
+      "parsons-solutioncodeline2-1": "2004",
+      "parsons-solutioncodeline2-2": "to",
+      "parsons-solutioncodeline2-3": "true"
+    },
+    "gradable": true
+  }

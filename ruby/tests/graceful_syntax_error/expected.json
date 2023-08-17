@@ -1,0 +1,4 @@
+{
+    "gradable": false,
+    "format_errors": "\nAn error occurred while loading ./spec/script_spec.rb.\nFailure/Error: require_relative '../script.rb'\n\nSyntaxError:\n  /grade/working/script.rb:3: syntax error, unexpected do\n  def halve(arg) do\n                 ^~\n# ./spec/script_spec.rb:1:in `require_relative'\n# ./spec/script_spec.rb:1:in `<top (required)>'\n"
+}

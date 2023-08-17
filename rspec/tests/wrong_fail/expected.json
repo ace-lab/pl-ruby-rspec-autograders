@@ -1,0 +1,12 @@
+{
+   "gradable": true,
+   "tests": [
+      {
+         "name": "GiftCard fails with negative balance",
+         "output": "Variant \"Var 1\" : Failed by wrong assertion\nVariant \"Var 2\" : Failed by wrong assertion\nVariant \"Var 3\" : Failed by wrong assertion\n",
+         "points": 0,
+         "max_points": 3
+      }
+   ],
+   "score": 0.0
+}

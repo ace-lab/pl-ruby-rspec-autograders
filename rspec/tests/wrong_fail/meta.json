@@ -1,0 +1,6 @@
+{
+    "submission_file": "spec/giftcard_spec.rb",
+    "submission_root": "",
+    "pre-text": "describe GiftCard do\n", 
+    "post-text": "end\n"
+}

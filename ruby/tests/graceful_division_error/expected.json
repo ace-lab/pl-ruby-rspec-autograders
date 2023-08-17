@@ -1,0 +1,30 @@
+{
+    "gradable": true,
+    "tests": [
+        {
+            "name": "halve divides its argument by 2",
+            "output": "Failed: \ndivided by 0 \n",
+            "points": 0,
+            "max_points": 1
+        },
+        {
+            "name": "halve errors on non-number inputs",
+            "output": "Failed: \nexpected ArgumentError, got #<NoMethodError: undefined method `/' for \"4\":String> with backtrace:\n  # ./script.rb:4:in `halve'\n  # ./spec/script_spec.rb:9:in `block (3 levels) in <top (required)>'\n  # ./spec/script_spec.rb:9:in `block (2 levels) in <top (required)>' \n",
+            "points": 0,
+            "max_points": 1
+        },
+        {
+            "name": "halve does not error on integer inputs",
+            "output": "Failed: \ndivided by 0 \n",
+            "points": 0,
+            "max_points": 1
+        },
+        {
+            "name": "halve can be called by another test",
+            "output": "Failed: \ndivided by 0 \n",
+            "points": 0,
+            "max_points": 1
+        }
+    ],
+    "score": 0.0
+}
