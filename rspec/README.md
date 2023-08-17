@@ -1,8 +1,89 @@
 # RSpec-Autograder
 
-Please see the [wiki](https://github.com/ace-lab/RSpec-Autograder/wiki) for details on [usage](), the [grading algorithm](), and more.
+This is a Docker image made to autograde RSpec Faded Parsons Problems in Prairielearn, developed at UC Berkeley.
 
 
 ## Work around the rspec autograder
 
 [Nelson Lojo and Armando Fox. 2022. Teaching Test-Writing As a Variably-Scaffolded Programming Pattern. In Proceedings of the 27th ACM Conference on on Innovation and Technology in Computer Science Education Vol. 1 (ITiCSE '22). Association for Computing Machinery, New York, NY, USA, 498–504. https://doi.org/10.1145/3502718.3524789](https://dl.acm.org/doi/10.1145/3502718.3524789)
+
+## Usage
+
+### `info.json`
+Add the following fields to `info.json` in the question you would like to autograde
+```json
+"gradingMethod": "External",
+"externalGradingOptions": {
+        "enabled": true,
+        "image" : "saasbook/pl-rspec-autograder",
+        "entrypoint": "/grader/run.py",
+        "timeout" : 60
+    }
+```
+
+### `tests/` directory
+A question writer must create the following in their Prairielearn question:
+- the folder `tests/` in the root directory of their question 
+  - subfolder `tests/common/`
+    - which will contain the code that is shared between [variants](https://github.com/ace-lab/pl-ruby-rspec-autograders/wiki/Glossary#variant)*
+  - json file `tests/meta.json`
+    - which will contain 
+      - the mapping of `_submission_file` as a value for the key `"submission_file"`
+      - (optional) the location to which additional submitted files would be copied
+  - subfolder `tests/solution/`
+    - which must contain the file `_submission_file` that has the instructor solution
+  - a number of subfolders `tests/suite<number>`
+    - each of which contains the difference from the files in `tests/common/` expressed by including a modified copy of the file that should be replaced/added to `tests/common/`
+
+\* This should include packaged gems (i.e. the result of `bundle package --all && bundle install --development` or whichever package environment you wish to use)
+
+The `tests/` folder in your question should look something like this:
+```
+tests/
++-- common/
+|   +-- .bundle/
+|   +-- spec/
+|   +-- vendor/
+|   +-- Gemfile
+|   +-- Gemfile.lock
+|   `-- replaced.rb
+|
++-- solution/
+|   +-- _submission_file  # this will hold the instructor's "submission"
+|   |
+|   ...                # any other submitted files can be included*
+|
++-- var_description_of_this_variant/
+|   `-- replaced.rb    # this file will replace the one in common
+|
+`-- meta.json          # this will contain the aforementioned mappings
+```
+*The student would need to submit additional files in the file submission box on the right of each question, but this feature has not yet been tested
+
+### Grading non-FPP questions
+
+The default search location for a student submission is in `data['submitted_answers']['student-parsons-solution']`. If you are not collecting code from a student in an [FPP](https://github.com/ace-lab/pl-ruby-rspec-autograders/wiki/Glossary#faded-parsons-problem), you may provide the file `tests/submission_processing.py` with the function `prepSubmission` that will prepare the files needed in step 7 of the grading process. Below is an explanation of the function's requirements.
+
+```python
+prepSubmission(data: Dict, ROOT_DIR: str, SUBMISSION_DIR: str) -> None
+```
+- `data` is the `data.json` file provided by prairielearn parsed into a dictionary. The student's submission data will be contained under the key `'submitted_answers'`
+- `ROOT_DIR` is the root directory of the question as it was loaded into the autograder (i.e. `/grade/`) 
+- `SUBMISSION_DIR` is the directory into which the files the function must produce must be written as per step 7 of the grading process
+
+For each [variant](https://github.com/ace-lab/pl-ruby-rspec-autograders/wiki/Glossary#variant) (consider `<var_i>`) the following is done:
+1) Make an empty working directory (`working/`)
+2) Load the files from `tests/common/` into `working/`
+3) Load the files from `tests/<var_i>/` into `working/`  
+4) Load the solution into `working/`
+    - in which `_submission_file` will be appended to the file detailed in `meta.json`
+    - and if `"submission_root"` is defined in `meta.json`, all files are copied to `working/<submission_root>`
+5) Run the `GRADING_SCRIPT` (in `parse.py`) and serialize the output into `Var` objects
+    - `GRADING_SCRIPT` is defined in `grader/parse.py` and is by default
+      ```$ cd working/ && bundle install --quiet && rspec --format json```
+6) Repeat steps 1-3
+7) Load the student submission (which will be loaded into `suites/submission` upon launch of the image) into `working/`
+    - the text input by the student will be in `tests/submission/_submission_file`
+    - all other files will be in `tests/submission/`
+8) Repeat step 5
+9) Compare the `Var` object generated by the student's submission to that of the instructor's solution and report results to Prairielearn
