@@ -8,7 +8,7 @@
          "max_points": 1
       }, {
          "name": "GiftCard succeeds with positive balance", 
-         "output": "Variant \"Var 2\" : Not found\n", 
+         "output": "Variant \"Var 2\" : Test not found\n", 
          "points": 0, 
          "max_points": 1
       }

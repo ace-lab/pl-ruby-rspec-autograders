@@ -74,7 +74,7 @@ class Var(object):
             #   Student test fails by wrong assertion
 
             if sub is None: 
-                msg = ("Not found\n" + submission.feedback_banner).strip() + "\n"
+                msg = ("Test not found\n" + submission.feedback_banner).strip() + "\n"
 
             elif sub.passed:
                 msg = f"Should fail but passed\n"
