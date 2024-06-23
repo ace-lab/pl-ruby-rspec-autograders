@@ -2,12 +2,12 @@
     "gradable": true, 
     "tests": [
         {
-            "name": "GiftCard fails with negative balance", 
+            "name": "GiftCard fails to instantiate with negative balance", 
             "output": "Variant \"Var 1\" : Test not found\n", 
             "points": 0, 
             "max_points": 1
         }, {
-            "name": "GiftCard succeeds with positive balance", 
+            "name": "Giftcard successfully assigns a positive balance on instantiation", 
             "output": "Variant \"Var 2\" : Failed to unexpected error\nundefined method `to' for -20:Integer\n", 
             "points": 0, 
             "max_points": 1
