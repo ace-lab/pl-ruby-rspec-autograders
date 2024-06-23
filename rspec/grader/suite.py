@@ -83,7 +83,7 @@ class Var(object):
                 msg = f"Failed to unexpected error\n{sub.failure.err_msg}\n"
 
             elif sub.failure.err_msg.split('\n')[0] != ref.failure.err_msg.split('\n')[0]:
-                msg = f"Failed by wrong assertion\n"
+                msg = f"Failed by wrong assertion\n{sub.failure.err_msg}\n"
 
             else:
                 msg = f"Failed as intended\n"

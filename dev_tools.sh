@@ -3,6 +3,8 @@ if [[ $IMAGE == "" ]]; then
     IMAGE="pl-fpp-ruby-autograder"
 fi
 
+echo Working on $REMOTE/$IMAGE
+
 TMP_OUT=/tmp/dev_out
 indent() {
     local indent=1
