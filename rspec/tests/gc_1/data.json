@@ -1,0 +1,9 @@
+{
+    "submitted_answers" : {
+        "student-parsons-solution": "it 'succeeds with positive balance' do\r\ngift_card = GiftCard.new(20)\r\n(gift_card.balance).to (20)\r\nend\r\n"
+    },
+    "raw_submitted_answers" : {
+        "student-parsons-solution": "it 'succeeds with positive balance' do\r\ngift_card = GiftCard.new(20)\r\n(gift_card.balance).to (20)\r\nend\r\n"
+    },
+    "gradable": true
+}
