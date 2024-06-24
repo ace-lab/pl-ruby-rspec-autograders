@@ -83,7 +83,8 @@ class Var(object):
                 msg = f"Failed to unexpected error\n{sub.failure.exception}\n"
 
             elif sub.failure.err_msg.split('\n')[0] != ref.failure.err_msg.split('\n')[0]:
-                msg = f"Failed by wrong assertion\n{sub.failure.err_msg}\n"
+                student_err_msg = sub.failure.err_msg.split('\n')[0].replace("with backtrace:", "")
+                msg = f"Failed by wrong assertion ({student_err_msg})\n"
 
             else:
                 msg = f"Failed as intended\n"
