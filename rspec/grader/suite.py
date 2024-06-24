@@ -38,9 +38,9 @@ class Test(object):
 
 class Var(object):
     def __init__(self, tests: Dict[str, Test], id: str, feedback_banner: str = "") -> None:
-        self.tests = tests
-        self.id = id
-        self.feedback_banner = f"\n{feedback_banner}\n"
+        self.tests: Dict[str, Test] = tests
+        self.id: str = id
+        self.feedback_banner: str = f"\n{feedback_banner}\n"
 
     def __repr__(self) -> str:
         # if len(self.tests) > 0:
@@ -48,6 +48,11 @@ class Var(object):
         # else:
             # info_str = ' "Failed to Unexpected Error"'
         return f"Var({self.id},{info_str}\n)"
+
+    def get_feedback_prefix(self) -> str:
+        if self.feedback_banner == ""
+            return self.id
+        return f"{self.id} ({self.feedback_banner})"
 
     def grade(self, reference) -> Dict:
         return Var.grade(self, reference)
