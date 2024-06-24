@@ -69,7 +69,7 @@ class Var(object):
 
             # cases in order:
             #   Student did not submit test case
-            #   Student test did not kill mutant correctly
+            #   Student test did not kill mutant (but instructor did)
             #   Student test fails, but not due to an assertion
             #   Student test fails by wrong assertion
 
@@ -83,7 +83,7 @@ class Var(object):
                 msg = f"Failed to unexpected error\n{sub.failure.err_msg}\n"
 
             elif sub.failure.err_msg.split('\n')[0] != ref.failure.err_msg.split('\n')[0]:
-                msg = f"Failed by wrong assertion\n{sub.failure.err_msg}\n"
+                msg = f"Failed by wrong assertion\n{sub.failure.exception}\n"
 
             else:
                 msg = f"Failed as intended\n"
