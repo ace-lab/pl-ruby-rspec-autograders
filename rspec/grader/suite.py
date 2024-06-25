@@ -50,7 +50,7 @@ class Var(object):
         return f"Var({self.id},{info_str}\n)"
 
     def get_feedback_prefix(self) -> str:
-        if self.feedback_banner == ""
+        if self.feedback_banner == "":
             return self.id
         return f"{self.id} ({self.feedback_banner})"
 
