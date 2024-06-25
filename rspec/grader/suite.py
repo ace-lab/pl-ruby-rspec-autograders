@@ -50,7 +50,7 @@ class Var(object):
         return f"Var({self.id},{info_str}\n)"
 
     def get_feedback_prefix(self) -> str:
-        if self.feedback_banner == "":
+        if self.feedback_banner.strip() == "":
             return self.id
         return f"{self.id} ({self.feedback_banner})"
 
@@ -85,11 +85,12 @@ class Var(object):
                 msg = f"Should fail but passed\n"
 
             elif sub.failure.exception != ref.failure.exception:
-                msg = f"Failed to unexpected error\n{sub.failure.exception}\n"
+                student_err_msg = sub.failure.err_msg.split('\n')[0].replace("with backtrace:", "")
+                msg = f"Failed to unexpected error\n> {student_err_msg}\n"
 
             elif sub.failure.err_msg.split('\n')[0] != ref.failure.err_msg.split('\n')[0]:
                 student_err_msg = sub.failure.err_msg.split('\n')[0].replace("with backtrace:", "")
-                msg = f"Failed by wrong assertion ({student_err_msg})\n"
+                msg = f"Failed by wrong assertion\n> {student_err_msg}\n"
 
             else:
                 msg = f"Failed as intended\n"
