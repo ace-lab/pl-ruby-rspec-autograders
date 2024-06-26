@@ -1,0 +1,9 @@
+{
+    "submitted_answers" : {
+        "student-parsons-solution": "it 'successfully assigns a positive balance on instantiation' do\n    gift_card = GiftCard.new(20)\n        (gift_card.balance).to (20)\nend\nit 'fails to instantiate with negative balance' do\n    expect { Giftcard.new(-1) }.to raise_error(ArgumentError)\nend\n"
+    },
+    "raw_submitted_answers" : {
+        "student-parsons-solution": "it 'successfully assigns a positive balance on instantiation' do\n    gift_card = GiftCard.new(20)\n        (gift_card.balance).to (20)\nend\nit 'fails to instantiate with negative balance' do\n    expect { Giftcard.new(-1) }.to raise_error(ArgumentError)\nend\n"
+    },
+    "gradable": true
+}

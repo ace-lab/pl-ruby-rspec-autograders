@@ -38,9 +38,9 @@ class Test(object):
 
 class Var(object):
     def __init__(self, tests: Dict[str, Test], id: str, feedback_banner: str = "") -> None:
-        self.tests = tests
-        self.id = id
-        self.feedback_banner = f"\n{feedback_banner}\n"
+        self.tests: Dict[str, Test] = tests
+        self.id: str = id
+        self.feedback_banner: str = f"\n{feedback_banner}\n"
 
     def __repr__(self) -> str:
         # if len(self.tests) > 0:
@@ -48,6 +48,11 @@ class Var(object):
         # else:
             # info_str = ' "Failed to Unexpected Error"'
         return f"Var({self.id},{info_str}\n)"
+
+    def get_feedback_prefix(self) -> str:
+        if self.feedback_banner.strip() == "":
+            return self.id
+        return f"{self.id} ({self.feedback_banner})"
 
     def grade(self, reference) -> Dict:
         return Var.grade(self, reference)
@@ -69,7 +74,7 @@ class Var(object):
 
             # cases in order:
             #   Student did not submit test case
-            #   Student test did not kill mutant correctly
+            #   Student test did not kill mutant (but instructor did)
             #   Student test fails, but not due to an assertion
             #   Student test fails by wrong assertion
 
@@ -80,10 +85,12 @@ class Var(object):
                 msg = f"Should fail but passed\n"
 
             elif sub.failure.exception != ref.failure.exception:
-                msg = f"Failed to unexpected error\n{sub.failure.err_msg}\n"
+                student_err_msg = sub.failure.err_msg.split('\n')[0].replace("with backtrace:", "")
+                msg = f"Failed to unexpected error\n> {student_err_msg}\n"
 
             elif sub.failure.err_msg.split('\n')[0] != ref.failure.err_msg.split('\n')[0]:
-                msg = f"Failed by wrong assertion\n"
+                student_err_msg = sub.failure.err_msg.split('\n')[0].replace("with backtrace:", "")
+                msg = f"Failed by wrong assertion\n> {student_err_msg}\n"
 
             else:
                 msg = f"Failed as intended\n"

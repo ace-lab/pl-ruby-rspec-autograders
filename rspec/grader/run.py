@@ -190,7 +190,7 @@ if __name__ == '__main__':
         for testID, data in report.items(): 
             out[testID] = {
                 'message' : out.get(testID, emptyTest)['message'] + \
-                            f"Variant \"{ref_var.id}\" : {data['message']}",
+                            f"{ref_var.get_feedback_prefix()} : {data['message']}",
                 'points' : out.get(testID, emptyTest)['points'] + int(data['correct']),
                 'max_points' : out.get(testID, emptyTest)['max_points'] + 1
             }

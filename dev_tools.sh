@@ -3,6 +3,8 @@ if [[ $IMAGE == "" ]]; then
     IMAGE="pl-fpp-ruby-autograder"
 fi
 
+echo Working on $REMOTE/$IMAGE
+
 TMP_OUT=/tmp/dev_out
 indent() {
     local indent=1
@@ -149,7 +151,7 @@ run_test() { # $1 is variant_dir (the question/tests/ directory)
     if [[ $1 == "" ]]; then 
         echo Test not provided, assuming \`run_tests\`
         run_tests
-        if [[ $? != "0" ]]; then return 1; fi
+        return $?
     fi
 
     # basically remove "run_test.sh" from the script call to get the directory

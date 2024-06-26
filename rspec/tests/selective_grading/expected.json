@@ -8,7 +8,7 @@
          "max_points": 1
       }, {
          "name": "GiftCard succeeds with positive balance", 
-         "output": "Variant \"Var 2\" : Failed to unexpected error\nundefined method `to' for -20:Integer\n", 
+         "output": "Variant \"Var 2\" : Failed to unexpected error",
          "points": 0, 
          "max_points": 1
       }
