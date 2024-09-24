@@ -77,9 +77,13 @@ def prep_submission():
         # copy student submission from /grade/data/data.json 
         #   into the end of f"{SUBMISSION_DIR}/_submission_file"
         #   and add the pre- and post- text
+        sub_data = submission_data
+        for path_item in grading_info.get("data_path", ['submitted_answers', 'student-parsons-solution']):
+            sub_data = sub_data[path_item]
+
         with open(f"{SUBMISSION_DIR}/_submission_file", 'w') as sub: 
             sub.write( grading_info.get('pre-text', '') )
-            sub.write( submission_data['submitted_answers']['student-parsons-solution'] )
+            sub.write( sub_data )
             sub.write( grading_info.get('post-text', '') )
 
 
