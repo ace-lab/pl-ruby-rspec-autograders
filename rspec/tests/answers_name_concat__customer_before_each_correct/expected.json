@@ -1,0 +1,18 @@
+{
+    "gradable": true,
+    "tests": [
+        {
+            "name": "Customer trying to buy notifies customer if balance covers payment",
+            "output": "Variant \"Changes success notification\" : Failed as intended\nVariant \"Different withdraw call\" : Failed as intended\n",
+            "points": 2,
+            "max_points": 2
+        },
+        {
+            "name": "Customer trying to buy notifies customer if balance does not cover payment",
+            "output": "Variant \"Different withdraw call\" : Failed as intended\nVariant \"Changed failure notification\" : Failed as intended\n",
+            "points": 2,
+            "max_points": 2
+        }
+    ],
+    "score": 1.0
+}

@@ -1,0 +1,11 @@
+{
+    "submission_file": "spec/customer_spec.rb",
+    "submission_root": "",
+    "pre-text": "describe Customer do\n  describe 'trying to buy' do\n",
+    "post-text": "  end\nend\n",
+    "data_path" : [
+        "submitted_answers",
+        "ansnm",
+        "student-parsons-solution"
+    ]
+}
