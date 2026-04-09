@@ -4,5 +4,6 @@
     "submit_to_line": -1,
     "pre-text": "\n",
     "post-text": "\n",
+    "answers_name": "test-answer-name",
     "grading_exclusions": []
 }

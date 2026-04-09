@@ -6,7 +6,7 @@ infer_image() {
 
     case "$current_dir" in
         ruby)
-            printf '%s\n' "pl-fpp-ruby-autograder"
+            printf '%s\n' "pl-ruby-autograder"
             ;;
         rspec)
             printf '%s\n' "pl-rspec-autograder"
@@ -187,7 +187,7 @@ prep_mount() { # assuming $1 is the variants_dir (the question/tests/ directory)
         cp -r "$variant_dir"/submission/. "$grade_root/student"
 
         submission_file_contents="$(jq -Rs . < "$grade_root/student/_submission_file")"
-        printf '%s\n' "{\"submitted_answers\": {\"student-parsons-solution\": $submission_file_contents}}" \
+        printf '%s\n' "{\"submitted_answers\": {\"submission\": $submission_file_contents}, \"raw_submitted_answers\": {\"submission.main\": \"[]\", \"submission.log\": \"[]\"}}" \
             > "$grade_root/data/data.json"
         ## double-check that _submission_file isn't in /grade/student
         rm -f "$grade_root/student/_submission_file"
@@ -390,7 +390,7 @@ new_test() { # $1 is the new test name (must be a valid filename)
     # populate the json objects with filler
     meta_content="{\n    \"submission_file\": \"script.rb\",\n    \"submission_root\": \"\"\n}\n"
     expected_content="{\n    \"gradable\":true,\n    \"tests\":[],\n    \"score\":0.0\n}\n"
-    data_content="{\n    \"submitted_answers\" : {\n        \"student-parsons-solution\": \"\"\n    },\n    \"gradable\": true\n}\n"
+    data_content="{\n    \"submitted_answers\" : {\n        \"submission\": \"\"\n    },\n    \"raw_submitted_answers\": {\n        \"submission.main\": \"[]\",\n        \"submission.log\": \"[]\"\n    },\n    \"gradable\": true\n}\n"
     echo -e "$meta_content" >> $1/meta.json
     echo -e "$expected_content" >> $1/expected.json
     echo -e "$data_content" >> $1/data.json

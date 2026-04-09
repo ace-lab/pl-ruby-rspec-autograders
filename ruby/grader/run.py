@@ -15,8 +15,6 @@ ROOT_DIR = "/grade"
 
 WORK_DIR = f"{ROOT_DIR}/working/"
 APP_DIR = f"{ROOT_DIR}/tests/app/"
-LEGACY_DEFAULT_DATA_PATH = ['submitted_answers', 'student-parsons-solution']
-
 class SolutionError(Exception):
     """Provided solution is not valid"""
 
@@ -34,8 +32,8 @@ def get_at_path(data: Dict, path) -> str:
             f"Could not locate the student submission at data path {path}."
         ) from error
 
-def infer_fpp_submission_path(data: Dict):
-    """Resolve the canonical FPP submission path from raw submitted inputs."""
+def infer_faded_parsons_submission_path(data: Dict):
+    """Resolve the canonical faded parsons submission path from raw submitted inputs."""
     raw_answers = data.get('raw_submitted_answers', {})
     submitted_answers = data.get('submitted_answers', {})
     answers_names = sorted({
@@ -59,18 +57,20 @@ def resolve_submission_path(data: Dict, grading_info: Dict):
     if 'answers_name' in grading_info:
         return ['submitted_answers', grading_info['answers_name']]
 
-    inferred_path = infer_fpp_submission_path(data)
+    inferred_path = infer_faded_parsons_submission_path(data)
     if inferred_path is not None:
         return inferred_path
 
-    return LEGACY_DEFAULT_DATA_PATH
+    raise SubmissionPathError(
+        "Could not infer a submission path. Add 'answers_name' or 'data_path' "
+        "to tests/meta.json, or provide tests/submission_processing.py."
+    )
 
 def get_submission(data: Dict, grading_info: Dict) -> str:
     """Get the student's submission as a plain-text string from data.json.
 
-    If `tests/submission_processing.py` does not exist, prefer the canonical
-    FPP path `["submitted_answers"][answers-name]`, falling back to the legacy
-    `["submitted_answers"]["student-parsons-solution"]` path.
+    If `tests/submission_processing.py` does not exist, use the canonical
+    faded parsons path `["submitted_answers"][answers-name]`.
     """
 
     if os.path.isfile('/grade/tests/submission_processing.py'):

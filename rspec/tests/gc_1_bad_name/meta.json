@@ -3,6 +3,7 @@
     "submission_root": "",
     "pre-text": "describe GiftCard do\n",
     "post-text": "end\n",
+    "answers_name": "test-answer-name",
     "grading_exclusions": {
         "wrong_withdraw_check": [],
         "initialize_balance_incorrectly": [],

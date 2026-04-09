@@ -60,11 +60,11 @@ tests/
 ```
 *The student would need to submit additional files in the file submission box on the right of each question, but this feature has not yet been tested
 
-### Grading non-FPP questions
+### Grading Non-Faded-Parsons Questions
 
-By default, the autograder first looks for the canonical FPP submission at `data['submitted_answers'][answers-name]`, auto-detecting `answers-name` from `raw_submitted_answers` when possible. If your question contains multiple `pl-faded-parsons` elements, set either `"answers_name"` or `"data_path"` in `tests/meta.json` to identify the one that should be graded. For backwards compatibility, the autograder falls back to `data['submitted_answers']['student-parsons-solution']` for legacy questions.
+By default, the autograder looks for the canonical faded parsons submission at `data['submitted_answers'][answers-name]`, auto-detecting `answers-name` from `raw_submitted_answers` when possible. If your question contains multiple `pl-faded-parsons` elements, or the path cannot be inferred, set either `"answers_name"` or `"data_path"` in `tests/meta.json` to identify the submission that should be graded.
 
-If you are not collecting code from a student in an [FPP](https://github.com/ace-lab/pl-ruby-rspec-autograders/wiki/Glossary#faded-parsons-problem), you may provide the file `tests/submission_processing.py` with the function `prepSubmission` that will prepare the files needed in step 7 of the grading process. Below is an explanation of the function's requirements.
+If you are not collecting code from a student in a [faded parsons problem](https://github.com/ace-lab/pl-ruby-rspec-autograders/wiki/Glossary#faded-parsons-problem), you may provide the file `tests/submission_processing.py` with the function `prepSubmission` that will prepare the files needed in step 7 of the grading process. Below is an explanation of the function's requirements.
 
 ```python
 prepSubmission(data: Dict, ROOT_DIR: str, SUBMISSION_DIR: str) -> None

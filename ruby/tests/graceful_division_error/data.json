@@ -1,7 +1,6 @@
 {
     "submitted_answers" : {
-        "student-parsons-solution": "def halve(arg)\n  arg / 0\nend"
+        "test-answer-name": "def halve(arg)\n  arg / 0\nend"
     },
     "gradable": true
 }
-

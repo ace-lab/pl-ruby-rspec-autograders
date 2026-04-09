@@ -5,7 +5,7 @@
     "post-text": "  end\nend\n",
     "data_path" : [
         "submitted_answers",
-        "ansnm",
-        "student-parsons-solution"
+        "test-answer-name",
+        "code"
     ]
 }

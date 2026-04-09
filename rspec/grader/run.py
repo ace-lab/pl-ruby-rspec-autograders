@@ -23,8 +23,6 @@ METADATA_FILE : str = f"{VARS_DIR}/meta.json"
 VAR_REGEX: str = '^var_.+$'
 # this will be made when this script is run
 WORK_DIR: str = f"{ROOT_DIR}/working"
-LEGACY_DEFAULT_DATA_PATH = ['submitted_answers', 'student-parsons-solution']
-
 # this can be defined properly in `parse.py`
 PRE_SCRIPT    : str = PRE_SCRIPT    .format(work=WORK_DIR, file=f"{WORK_DIR}/{ENTRY_FILE}")
 GRADING_SCRIPT: str = GRADING_SCRIPT.format(work=WORK_DIR, file=f"{WORK_DIR}/{ENTRY_FILE}")
@@ -77,8 +75,8 @@ def get_at_path(data: Dict, path) -> str:
             f"Could not locate the student submission at data path {path}."
         ) from error
 
-def infer_fpp_submission_path(data: Dict):
-    """Resolve the canonical FPP submission path from raw submitted inputs."""
+def infer_faded_parsons_submission_path(data: Dict):
+    """Resolve the canonical faded parsons submission path from raw submitted inputs."""
     raw_answers = data.get('raw_submitted_answers', {})
     submitted_answers = data.get('submitted_answers', {})
     answers_names = sorted({
@@ -102,11 +100,14 @@ def resolve_submission_path(data: Dict, grading_info: Dict):
     if 'answers_name' in grading_info:
         return ['submitted_answers', grading_info['answers_name']]
 
-    inferred_path = infer_fpp_submission_path(data)
+    inferred_path = infer_faded_parsons_submission_path(data)
     if inferred_path is not None:
         return inferred_path
 
-    return LEGACY_DEFAULT_DATA_PATH
+    raise SubmissionPathError(
+        "Could not infer a submission path. Add 'answers_name' or 'data_path' "
+        "to tests/meta.json, or provide tests/submission_processing.py."
+    )
 
 def prep_submission():
     """Load the submission into {SUBMISSION_DIR}/_submission_file"""
