@@ -25,9 +25,10 @@ Assuming you have Prairielearn up and running locally (if not see [Installing PL
     "submit_to_line" : 3,
     "pre-text" : "any lines to precede\n  the student's submission\n", 
     "post-text": "any lines to succeed\n  the student's submission\n",
+    "answers_name": "optional-fpp-answers-name"
 }
 ```
-*Note that the key `submission_root` is optional, as the feature that requires it is not yet implemented as of 21 Aug 2023
+*Note that `submission_root` is optional, as the feature that requires it is not yet implemented as of 21 Aug 2023. `answers_name` is also optional and is only needed when one question contains multiple `pl-faded-parsons` elements and the autograder should grade a specific one.
 
 3) In the `tests/` directory in your question, include the complete application that the student submits to
    in `tests/app/`. Note: do not include the text included in `meta.json`'s `"pre-text"` and `"post-text"` 
@@ -42,7 +43,9 @@ Assuming you have Prairielearn up and running locally (if not see [Installing PL
 
 1. The autograder checks if a file named `tests/submission_processing.py` was passed.
     - If so, it tries to import a function with the signature ```get_submission(data: Dict) -> str``` that takes in the submission data and returns the student's submission as plaintext
-    - If not, the autograder extracts the student submission from `data['submitted_answers"]["student-parsons-solution"]`
+    - If not, the autograder first looks for the canonical FPP submission at `data['submitted_answers'][answers-name]`, auto-detecting `answers-name` from `raw_submitted_answers` when possible.
+    - If that is ambiguous or you need a specific FPP in a multi-FPP question, set `"answers_name"` in `tests/meta.json` or provide `tests/submission_processing.py`.
+    - For backwards compatibility, the autograder falls back to `data['submitted_answers']['student-parsons-solution']` for legacy questions.
 2. The autograder then writes the student submission along with the pre-text and post-text (in `meta.json`) to the submission_file (in `meta.json`) at the line provided (in `meta.json`) to the application in `tests/app`.
 3. Then RSpec is run on the application and the test results are gathered.
    - If there is an issue running RSpec, the output of `rspec --format json` is printed to the console hosting PL and the autograder exits, marking the submission ungradable.

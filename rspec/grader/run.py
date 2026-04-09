@@ -23,10 +23,14 @@ METADATA_FILE : str = f"{VARS_DIR}/meta.json"
 VAR_REGEX: str = '^var_.+$'
 # this will be made when this script is run
 WORK_DIR: str = f"{ROOT_DIR}/working"
+LEGACY_DEFAULT_DATA_PATH = ['submitted_answers', 'student-parsons-solution']
 
 # this can be defined properly in `parse.py`
 PRE_SCRIPT    : str = PRE_SCRIPT    .format(work=WORK_DIR, file=f"{WORK_DIR}/{ENTRY_FILE}")
 GRADING_SCRIPT: str = GRADING_SCRIPT.format(work=WORK_DIR, file=f"{WORK_DIR}/{ENTRY_FILE}")
+
+class SubmissionPathError(Exception):
+    """Could not locate the student submission in data.json"""
 
 def do_assertions():
     if not os.path.exists(f"{ROOT_DIR}"):
@@ -62,6 +66,48 @@ def load_submission() -> Tuple[Dict, Dict]:
 
     return submission_data, grading_info
 
+def get_at_path(data: Dict, path) -> str:
+    try:
+        current = data
+        for path_item in path:
+            current = current[path_item]
+        return current
+    except KeyError as error:
+        raise SubmissionPathError(
+            f"Could not locate the student submission at data path {path}."
+        ) from error
+
+def infer_fpp_submission_path(data: Dict):
+    """Resolve the canonical FPP submission path from raw submitted inputs."""
+    raw_answers = data.get('raw_submitted_answers', {})
+    submitted_answers = data.get('submitted_answers', {})
+    answers_names = sorted({
+        key[:-len('.main')]
+        for key in raw_answers.keys()
+        if key.endswith('.main') and key[:-len('.main')] in submitted_answers
+    })
+
+    if len(answers_names) == 1:
+        return ['submitted_answers', answers_names[0]]
+    if len(answers_names) > 1:
+        raise SubmissionPathError(
+            "Multiple pl-faded-parsons submissions found. Add "
+            "'answers_name' or 'data_path' to tests/meta.json."
+        )
+    return None
+
+def resolve_submission_path(data: Dict, grading_info: Dict):
+    if 'data_path' in grading_info:
+        return grading_info['data_path']
+    if 'answers_name' in grading_info:
+        return ['submitted_answers', grading_info['answers_name']]
+
+    inferred_path = infer_fpp_submission_path(data)
+    if inferred_path is not None:
+        return inferred_path
+
+    return LEGACY_DEFAULT_DATA_PATH
+
 def prep_submission():
     """Load the submission into {SUBMISSION_DIR}/_submission_file"""
     try:
@@ -77,9 +123,10 @@ def prep_submission():
         # copy student submission from /grade/data/data.json 
         #   into the end of f"{SUBMISSION_DIR}/_submission_file"
         #   and add the pre- and post- text
-        sub_data = submission_data
-        for path_item in grading_info.get("data_path", ['submitted_answers', 'student-parsons-solution']):
-            sub_data = sub_data[path_item]
+        sub_data = get_at_path(
+            submission_data,
+            resolve_submission_path(submission_data, grading_info)
+        )
 
         with open(f"{SUBMISSION_DIR}/_submission_file", 'w') as sub: 
             sub.write( grading_info.get('pre-text', '') )
@@ -179,7 +226,18 @@ if __name__ == '__main__':
     }
 
     prep_directories()
-    prep_submission()
+    try:
+        prep_submission()
+    except SubmissionPathError as error:
+        with open(RESULTS_FILE, 'w') as results:
+            json_data: str = json_dumps({
+                'gradable' : False,
+                'tests' : [],
+                "format_errors" : f"Instructor Error: {error.args[0]}"
+            })
+            results.write(json_data)
+        print(f"The autograder could not locate the submission: {error.args[0]}")
+        exit(0)
 
     variants = ls_vars()
     emptyTest = { 'message': '', 'points': 0, 'max_points': 0 }

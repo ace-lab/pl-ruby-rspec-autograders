@@ -62,7 +62,9 @@ tests/
 
 ### Grading non-FPP questions
 
-The default search location for a student submission is in `data['submitted_answers']['student-parsons-solution']`. If you are not collecting code from a student in an [FPP](https://github.com/ace-lab/pl-ruby-rspec-autograders/wiki/Glossary#faded-parsons-problem), you may provide the file `tests/submission_processing.py` with the function `prepSubmission` that will prepare the files needed in step 7 of the grading process. Below is an explanation of the function's requirements.
+By default, the autograder first looks for the canonical FPP submission at `data['submitted_answers'][answers-name]`, auto-detecting `answers-name` from `raw_submitted_answers` when possible. If your question contains multiple `pl-faded-parsons` elements, set either `"answers_name"` or `"data_path"` in `tests/meta.json` to identify the one that should be graded. For backwards compatibility, the autograder falls back to `data['submitted_answers']['student-parsons-solution']` for legacy questions.
+
+If you are not collecting code from a student in an [FPP](https://github.com/ace-lab/pl-ruby-rspec-autograders/wiki/Glossary#faded-parsons-problem), you may provide the file `tests/submission_processing.py` with the function `prepSubmission` that will prepare the files needed in step 7 of the grading process. Below is an explanation of the function's requirements.
 
 ```python
 prepSubmission(data: Dict, ROOT_DIR: str, SUBMISSION_DIR: str) -> None
