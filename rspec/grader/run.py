@@ -4,8 +4,8 @@ import shutil
 import subprocess
 import importlib.machinery
 
+from collections import defaultdict
 from pathlib import Path
-from re import match as re_match
 from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Dict, Sequence, Tuple
@@ -21,7 +21,7 @@ SOLUTION_DIR = VARS_DIR / "solution"
 SUBMISSION_DIR = VARS_DIR / "submission"
 METADATA_FILE = VARS_DIR / "meta.json"
 
-VAR_REGEX: str = "^var_.+$"
+VAR_GLOB: str = "var_*"
 # this will be made when this script is run
 WORK_DIR = ROOT_DIR / "working"
 
@@ -33,9 +33,16 @@ class SubmissionPathError(Exception):
     """Could not locate the student submission in data.json"""
 
 
-def do_assertions():
+class InvalidSubmissionError(Exception):
+    """Could not locate the student submission in data.json"""
+
+
+def validate_file_structure():
     if not ROOT_DIR.exists():
         raise Exception(f"{ROOT_DIR} not found! Mounting may have failed.")
+
+    out_path = ROOT_DIR / "results"
+    out_path.mkdir(exist_ok=True)
 
     if not VARS_DIR.exists():
         raise Exception(f"{VARS_DIR} not found! Mounting may have failed.")
@@ -48,37 +55,30 @@ def do_assertions():
     if not SUBMISSION_FILE.is_file():
         raise Exception(f"Submission data file {SUBMISSION_FILE} not found!")
 
-
-def prep_directories():
     WORK_DIR.mkdir(exist_ok=True)
     SUBMISSION_DIR.mkdir(exist_ok=True)
 
 
-def load_submission() -> Tuple[Dict, Dict]:
-    """Load the submission object and the grading object from disk"""
+def write_result(json: Dict, *, gradable: bool):
+    json["gradable"] = gradable
+    with RESULTS_FILE.open("w") as results:
+        json_data: str = json_dumps(json)
+        results.write(json_data)
 
+
+def write_invalid_result(err: str):
+    """Reports that a submission is ungradable, does not count as a grading attmept"""
+    write_result({"format_errors": err, "tests": []}, gradable=False)
+
+
+def load_problem_data():
     with METADATA_FILE.open("r") as info:
-        grading_info = json_loads(info.read())
+        metadata = json_loads(info.read())
+
     with SUBMISSION_FILE.open("r") as data:
-        content = data.read()
-        # print("Ingested submission data:")
-        # pprint(content)
-        submission_data = json_loads(content)
+        submission_data = json_loads(data.read())
 
-    return submission_data, grading_info
-
-
-def get_at_path(data: DataDict, path: DataPath):
-    try:
-        current = data
-        for path_item in path:
-            assert isinstance(current, dict)
-            current = current[path_item]
-        return current
-    except KeyError as error:
-        raise SubmissionPathError(
-            f"Could not locate the student submission at data path {path}."
-        ) from error
+    return submission_data, metadata
 
 
 def infer_faded_parsons_submission_path(data: DataDict):
@@ -104,13 +104,26 @@ def infer_faded_parsons_submission_path(data: DataDict):
     return None
 
 
-def resolve_submission_path(data: Dict, grading_info: Dict):
-    if "data_path" in grading_info:
-        return grading_info["data_path"]
-    if "answers_name" in grading_info:
-        return ["submitted_answers", grading_info["answers_name"]]
+def get_at_path(data: DataDict, path: DataPath):
+    try:
+        current = data
+        for path_item in path:
+            assert isinstance(current, dict)
+            current = current[path_item]
+        return current
+    except KeyError as error:
+        raise SubmissionPathError(
+            f"Could not locate the student submission at data path {path}."
+        ) from error
 
-    inferred_path = infer_faded_parsons_submission_path(data)
+
+def resolve_path(submission, metadata):
+    if "data_path" in metadata:
+        return metadata["data_path"]
+    if "answers_name" in metadata:
+        return ["submitted_answers", metadata["answers_name"]]
+
+    inferred_path = infer_faded_parsons_submission_path(submission)
     if inferred_path is not None:
         return inferred_path
 
@@ -120,7 +133,7 @@ def resolve_submission_path(data: Dict, grading_info: Dict):
     )
 
 
-def prep_submission():
+def prepare_submission_directory(submission, metadata):
     """Load the submission into {SUBMISSION_DIR}/_submission_file"""
     try:
         loader = importlib.machinery.SourceFileLoader(
@@ -128,7 +141,7 @@ def prep_submission():
             str(ROOT_DIR / "tests" / "submission_processing.py"),
         )
         module = loader.load_module()
-        module.prepSubmission(submission_data, str(ROOT_DIR), str(SUBMISSION_DIR))
+        module.prepSubmission(submission, str(ROOT_DIR), str(SUBMISSION_DIR))
     except:
         # there may not be files in student/, so we just hide the error
         # TODO: check if files exist before doing this
@@ -139,15 +152,13 @@ def prep_submission():
         # copy student submission from /grade/data/data.json
         #   into the end of f"{SUBMISSION_DIR}/_submission_file"
         #   and add the pre- and post- text
-        sub_data = get_at_path(
-            submission_data, resolve_submission_path(submission_data, grading_info)
-        )
+        sub_data = get_at_path(submission, resolve_path(submission, metadata))
         assert isinstance(sub_data, str)
 
         with (SUBMISSION_DIR / "_submission_file").open("w") as sub:
-            sub.write(grading_info.get("pre-text", ""))
+            sub.write(metadata.get("pre-text", ""))
             sub.write(sub_data)
-            sub.write(grading_info.get("post-text", ""))
+            sub.write(metadata.get("post-text", ""))
 
 
 def copy_directory_contents(source: Path, destination: Path):
@@ -170,14 +181,12 @@ def reset_directory_contents(directory: Path):
             item.unlink()
 
 
-def ls_vars(directory: Path = VARS_DIR):
-    """get the folder names that match VAR_REGEX"""
-    yield from (
-        path.name for path in directory.iterdir() if re_match(VAR_REGEX, path.name)
-    )
+def variant_directories(directory: Path = VARS_DIR):
+    """get the folder names that match VAR_GLOB"""
+    yield from (path.name for path in directory.glob(VAR_GLOB))
 
 
-def load_var(var_name: str, solution: bool):
+def load_var(var_name: str, sub_metadata: Dict, solution: bool):
     """Empties the working directory, copies in the necessary files
     from common/, the variant, and the submission"""
     # nuke working directory
@@ -195,23 +204,23 @@ def load_var(var_name: str, solution: bool):
 
     ## append the submitted code snippet
     with (sub_dir / "_submission_file").open("r") as submission_file:
-        with (WORK_DIR / grading_info["submission_file"]).open("a") as grading_file:
+        with (WORK_DIR / sub_metadata["submission_file"]).open("a") as grading_file:
             grading_file.write(submission_file.read())
     ## and all additionally submitted files
-    if "submission_root" in grading_info.keys():
-        copy_directory_contents(sub_dir, WORK_DIR / grading_info["submission_root"])
+    if "submission_root" in sub_metadata.keys():
+        copy_directory_contents(sub_dir, WORK_DIR / sub_metadata["submission_root"])
     ## but we accidentally copy in the submission again, so let's remove that
-    if "submission_root" in grading_info.keys():
+    if "submission_root" in sub_metadata.keys():
         submission_copy = (
-            WORK_DIR / grading_info["submission_root"] / "_submission_file"
+            WORK_DIR / sub_metadata["submission_root"] / "_submission_file"
         )
         if submission_copy.exists():
             submission_copy.unlink()
 
 
-def run_var(var_name: str, solution: bool) -> Tuple[VariantResult, str]:
+def run_var(var_name: str, sub_metadata: Dict, solution: bool):
     """Prepares, runs, and parses the execution of a variant from its name (its folder)"""
-    load_var(var_name=var_name, solution=solution)
+    load_var(var_name=var_name, sub_metadata=sub_metadata, solution=solution)
 
     vname = var_name[len("var_") :]  # cut out the "var_" at the front
     vname = vname.capitalize()  # fix capitalization ("hello_There" -> "Hello_there")
@@ -243,99 +252,84 @@ def run_var(var_name: str, solution: bool) -> Tuple[VariantResult, str]:
     return sys.exit(1)
 
 
-if __name__ == "__main__":
-    out_path = ROOT_DIR / "results"
-    if not out_path.exists():
-        out_path.mkdir()
-    # in case something goes wrong, write "ungradable" until a full grading run is done
-    with RESULTS_FILE.open("w") as results:
-        json_data: str = json_dumps(
-            {
-                "gradable": False,
-                "tests": [],
-                "format_errors": "Unexpected Error. If you are developing this locally, check the"
-                + "output of your local server. Otherwise, consult your system administrator.",
-            }
-        )
-        results.write(json_data)
+def grade_all_vars(metadata) -> Dict[str, VariantResult.Feedback]:
+    """returns a dict of (testId, testGrade) pairs consolidated across all vars"""
+    tests = defaultdict(VariantResult.Feedback)
 
-    try:
-        do_assertions()
-    except Exception as e:
-        with RESULTS_FILE.open("w") as results:
-            json_data: str = json_dumps(
-                {
-                    "gradable": False,
-                    "tests": [],
-                    "format_errors": f"Instructor Error: {e.args[0]}",
-                }
-            )
-            results.write(json_data)
-        print(f"The autograder was not passed a valid submission: {e.args[0]}")
-        exit(0)
-
-    submission_data, grading_info = load_submission()
-
-    gradingData: Dict = {
-        "gradable": True,
-        # this will store reports generated by VariantResult.grade()
-        "tests": [],
-    }
-
-    prep_directories()
-    try:
-        prep_submission()
-    except SubmissionPathError as error:
-        with RESULTS_FILE.open("w") as results:
-            json_data: str = json_dumps(
-                {
-                    "gradable": False,
-                    "tests": [],
-                    "format_errors": f"Instructor Error: {error.args[0]}",
-                }
-            )
-            results.write(json_data)
-        print(f"The autograder could not locate the submission: {error.args[0]}")
-        exit(0)
-
-    variants = ls_vars()
-    emptyTest = {"message": "", "points": 0, "max_points": 0}
-    out = {}
-
-    for var in variants:
-        ref_var, ref_out = run_var(var_name=var, solution=True)
-        sub_var, sub_out = run_var(var_name=var, solution=False)
+    for var in variant_directories():
+        ref_var, _ref_out = run_var(var, metadata, solution=True)
+        sub_var, _sub_out = run_var(var, metadata, solution=False)
 
         report = VariantResult.grade(reference=ref_var, submission=sub_var)
 
+        # TODO: this compression could cause collision across vars if there
+        # are two tests with the same ID (fn name iirc)
         for testID, data in report.items():
-            out[testID] = {
-                "message": out.get(testID, emptyTest)["message"]
-                + f"{ref_var.get_feedback_prefix()} : {data['message']}",
-                "points": out.get(testID, emptyTest)["points"] + int(data["correct"]),
-                "max_points": out.get(testID, emptyTest)["max_points"] + 1,
+            test_result = tests[testID]
+            prefix = ref_var.get_feedback_prefix()
+            test_result.output += f"{prefix} : {data.output}"
+            test_result.points += data.points
+            test_result.max_points += 1
+
+    return dict(tests)
+
+
+def format_final_output(test_grades: Dict[str, VariantResult.Feedback]):
+    pts = sum(t.points for t in test_grades.values())
+    max_pts = sum(t.max_points for t in test_grades.values())
+    return {
+        "score": max(0, max_pts) and (pts / max_pts),
+        # this will store reports generated by VariantResult.grade()
+        "tests": [
+            {
+                "name": testID,
+                "points": data.points,
+                "max_points": data.max_points,
+                "output": data.output,
             }
+            for testID, data in test_grades.items()
+        ],
+    }
 
-    gradingData["tests"] = [
-        {
-            "name": testID,
-            "output": data["message"],
-            "points": data["points"],
-            "max_points": data["max_points"],
-        }
-        for testID, data in out.items()
-    ]
 
-    if len(gradingData["tests"]) > 0:
-        pts = sum([test["points"] for test in gradingData["tests"]])
-        max_pts = sum([test["max_points"] for test in gradingData["tests"]])
-        gradingData["score"] = pts / max_pts
-    else:
-        print("No gradable test-mutant pairs found!")
-        gradingData["score"] = 0
+def __main__():
+    try:
+        validate_file_structure()
+    except Exception as error:
+        write_invalid_result(f"Instructor Error: {error.args[0]}")
+        raise InvalidSubmissionError(
+            f"The autograder expected a different file structure"
+        ) from error
 
-    with RESULTS_FILE.open("w") as results:
-        json_data: str = json_dumps(gradingData)
-        # print("Returned grading data:")
-        # pprint(gradingData)
-        results.write(json_data)
+    try:
+        submission_data, metadata = load_problem_data()
+        prepare_submission_directory(submission_data, metadata)
+    except (SubmissionPathError, FileNotFoundError) as error:
+        write_invalid_result(f"Instructor Error: {error.args[0]}")
+        raise InvalidSubmissionError(
+            f"The autograder could not locate the submission data"
+        ) from error
+
+    try:
+        test_grades = grade_all_vars(metadata)
+    except Exception as error:
+        write_invalid_result(f"Instructor Error: {error.args[0]}")
+        raise InvalidSubmissionError(
+            f"The autograder variant harness crashed"
+        ) from error
+
+    try:
+        if not test_grades:
+            print("No gradable test-mutant pairs found!")
+
+        gradingData = format_final_output(test_grades)
+        write_result(gradingData, gradable=True)
+    except Exception as error:
+        write_invalid_result(f"Instructor Error: {error.args[0]}")
+        raise InvalidSubmissionError(
+            f"The autograder could not write grading results"
+        ) from error
+
+
+if __name__ == "__main__":
+    __main__()

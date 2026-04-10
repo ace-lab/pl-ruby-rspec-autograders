@@ -1,4 +1,4 @@
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List, Optional
 from dataclasses import dataclass, field
 
 VALID_EXPECTATION_ERRORS = (
@@ -58,6 +58,7 @@ class TestResult:
         return f"{self.description}: {'passed' if self.passed else 'failed'}"
 
 
+
 @dataclass(frozen=True)
 class VariantResult:
     tests: Dict[str, TestResult]
@@ -73,11 +74,17 @@ class VariantResult:
             return self.id
         return f"{self.id} (\n{self.feedback_banner}\n)"
 
+    @dataclass
+    class Feedback:
+        output: str = ""
+        points: int = 0
+        max_points: int = 0
+
     @staticmethod
     def grade(
         *, reference: "VariantResult", submission: "VariantResult"
-    ) -> Dict[str, Dict[Literal["correct", "message"], str]]:
-        """Produce a scoring report from two Variants, first as reference, second as submission"""
+    ) -> Dict[str, 'VariantResult.Feedback']:
+        """Produce a scoring report from two Variants, first as reference, second as submission. Everything is graded 0/1 or 1/1."""
         out = {}
 
         for testID, ref in reference.tests.items():
@@ -98,6 +105,6 @@ class VariantResult:
                 correct = diff is None
                 msg = diff or "Failed as intended"
 
-            out[testID] = {"correct": correct, "message": msg + "\n"}
+            out[testID] = VariantResult.Feedback(msg, int(correct), 1)
 
         return out
