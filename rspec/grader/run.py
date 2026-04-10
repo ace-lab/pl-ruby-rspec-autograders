@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-import os
 import sys
 import shutil
 import subprocess
@@ -11,7 +10,7 @@ from json import dumps as json_dumps
 from json import loads as json_loads
 from typing import Dict, Sequence, Tuple
 from suite import VariantResult
-from parse import parseOutput, verifyOutput, GRADING_SCRIPT, PRE_SCRIPT, ENTRY_FILE
+from parse import parseOutput, verifyOutput, GRADING_SCRIPT, PRE_SCRIPT
 
 ROOT_DIR = Path("/grade" if len(sys.argv) < 2 else sys.argv[1])
 SUBMISSION_FILE = ROOT_DIR / "data" / "data.json"
@@ -25,9 +24,6 @@ METADATA_FILE = VARS_DIR / "meta.json"
 VAR_REGEX: str = "^var_.+$"
 # this will be made when this script is run
 WORK_DIR = ROOT_DIR / "working"
-# this can be defined properly in `parse.py`
-PRE_SCRIPT: str = PRE_SCRIPT.format(work=WORK_DIR, file=WORK_DIR / ENTRY_FILE)
-GRADING_SCRIPT: str = GRADING_SCRIPT.format(work=WORK_DIR, file=WORK_DIR / ENTRY_FILE)
 
 DataPath = Sequence[str]
 DataDict = dict[str, "str | DataDict"]
@@ -232,21 +228,19 @@ def run_var(var_name: str, solution: bool) -> Tuple[VariantResult, str]:
     ).stdout
     verification = verifyOutput(output)
 
-    def panic(var_name: str, stdout: str):
-        suite = "instructor" if solution else "student"
-        print(f'Error when running variant "{var_name}" on {suite} suite. Output:')
-        print(f"> {stdout}")
-        return sys.exit(1)
-
     # if not solution:
     #     print(f"Contents of {WORK_DIR}/spec/giftcard_spec.rb")
     #     with open(f"{WORK_DIR}/spec/giftcard_spec.rb", "r") as f:
     #         print(f.read())
+    parsed = parseOutput(output=output, name=vname, result=verification)
 
-    return (
-        parseOutput(output=output, name=vname, result=verification, exit_func=panic),
-        output,
-    )
+    if parsed is not None:
+        return parsed, output
+
+    suite = "instructor" if solution else "student"
+    print(f'Error when running variant "{vname}" on {suite} suite. Output:')
+    print(f"> {output}")
+    return sys.exit(1)
 
 
 if __name__ == "__main__":
