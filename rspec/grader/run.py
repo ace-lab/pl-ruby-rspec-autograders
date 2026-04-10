@@ -1,32 +1,36 @@
 #!/usr/bin/python3
 import os
 import sys
+import shutil
+import subprocess
 import importlib.machinery
 
+from pathlib import Path
 from re import match as re_match
 from json import dumps as json_dumps
 from json import loads as json_loads
-from typing import Dict, Tuple
+from typing import Dict, Sequence, Tuple
 from suite import Var
 from parse import parseOutput, verifyOutput, GRADING_SCRIPT, PRE_SCRIPT, ENTRY_FILE
 
-ROOT_DIR: str = "/grade" if len(sys.argv) < 2 else sys.argv[1]
-SUBMISSION_FILE: str = f"{ROOT_DIR}/data/data.json"
-RESULTS_FILE: str = f"{ROOT_DIR}/results/results.json"
+ROOT_DIR = Path("/grade" if len(sys.argv) < 2 else sys.argv[1])
+SUBMISSION_FILE = ROOT_DIR / "data" / "data.json"
+RESULTS_FILE = ROOT_DIR / "results" / "results.json"
 
-VARS_DIR: str = f"{ROOT_DIR}/tests"
-SOLUTION_DIR: str = f"{VARS_DIR}/solution"
-SUBMISSION_DIR: str = f"{VARS_DIR}/submission"
-METADATA_FILE: str = f"{VARS_DIR}/meta.json"
+VARS_DIR = ROOT_DIR / "tests"
+SOLUTION_DIR = VARS_DIR / "solution"
+SUBMISSION_DIR = VARS_DIR / "submission"
+METADATA_FILE = VARS_DIR / "meta.json"
 
 VAR_REGEX: str = "^var_.+$"
 # this will be made when this script is run
-WORK_DIR: str = f"{ROOT_DIR}/working"
+WORK_DIR = ROOT_DIR / "working"
 # this can be defined properly in `parse.py`
-PRE_SCRIPT: str = PRE_SCRIPT.format(work=WORK_DIR, file=f"{WORK_DIR}/{ENTRY_FILE}")
-GRADING_SCRIPT: str = GRADING_SCRIPT.format(
-    work=WORK_DIR, file=f"{WORK_DIR}/{ENTRY_FILE}"
-)
+PRE_SCRIPT: str = PRE_SCRIPT.format(work=WORK_DIR, file=WORK_DIR / ENTRY_FILE)
+GRADING_SCRIPT: str = GRADING_SCRIPT.format(work=WORK_DIR, file=WORK_DIR / ENTRY_FILE)
+
+DataPath = Sequence[str]
+DataDict = dict[str, "str | DataDict"]
 
 
 class SubmissionPathError(Exception):
@@ -34,36 +38,32 @@ class SubmissionPathError(Exception):
 
 
 def do_assertions():
-    if not os.path.exists(f"{ROOT_DIR}"):
+    if not ROOT_DIR.exists():
         raise Exception(f"{ROOT_DIR} not found! Mounting may have failed.")
 
-    if not os.path.exists(f"{VARS_DIR}"):
+    if not VARS_DIR.exists():
         raise Exception(f"{VARS_DIR} not found! Mounting may have failed.")
 
-    if not os.path.isfile(METADATA_FILE):
+    if not METADATA_FILE.is_file():
         raise Exception(
             f"Metadata file {METADATA_FILE} not found! Check that your tests/ directory contains it."
         )
 
-    if not os.path.isfile(SUBMISSION_FILE):
+    if not SUBMISSION_FILE.is_file():
         raise Exception(f"Submission data file {SUBMISSION_FILE} not found!")
 
 
 def prep_directories():
-
-    if not os.path.exists(WORK_DIR):
-        os.mkdir(WORK_DIR)
-
-    if not os.path.exists(SUBMISSION_DIR):
-        os.mkdir(SUBMISSION_DIR)
+    WORK_DIR.mkdir(exist_ok=True)
+    SUBMISSION_DIR.mkdir(exist_ok=True)
 
 
 def load_submission() -> Tuple[Dict, Dict]:
     """Load the submission object and the grading object from disk"""
 
-    with open(METADATA_FILE, "r") as info:
+    with METADATA_FILE.open("r") as info:
         grading_info = json_loads(info.read())
-    with open(SUBMISSION_FILE, "r") as data:
+    with SUBMISSION_FILE.open("r") as data:
         content = data.read()
         # print("Ingested submission data:")
         # pprint(content)
@@ -72,10 +72,11 @@ def load_submission() -> Tuple[Dict, Dict]:
     return submission_data, grading_info
 
 
-def get_at_path(data: Dict, path) -> str:
+def get_at_path(data: DataDict, path: DataPath):
     try:
         current = data
         for path_item in path:
+            assert isinstance(current, dict)
             current = current[path_item]
         return current
     except KeyError as error:
@@ -84,9 +85,10 @@ def get_at_path(data: Dict, path) -> str:
         ) from error
 
 
-def infer_faded_parsons_submission_path(data: Dict):
+def infer_faded_parsons_submission_path(data: DataDict):
     """Resolve the canonical faded parsons submission path from raw submitted inputs."""
     raw_answers = data.get("raw_submitted_answers", {})
+    assert isinstance(raw_answers, dict)
     submitted_answers = data.get("submitted_answers", {})
     answers_names = sorted(
         {
@@ -126,14 +128,17 @@ def prep_submission():
     """Load the submission into {SUBMISSION_DIR}/_submission_file"""
     try:
         loader = importlib.machinery.SourceFileLoader(
-            "submission_processing", "/grade/tests/submission_processing.py"
+            "submission_processing",
+            str(ROOT_DIR / "tests" / "submission_processing.py"),
         )
         module = loader.load_module()
-        module.prepSubmission(submission_data, ROOT_DIR, SUBMISSION_DIR)
+        module.prepSubmission(submission_data, str(ROOT_DIR), str(SUBMISSION_DIR))
     except:
         # there may not be files in student/, so we just hide the error
         # TODO: check if files exist before doing this
-        os.system(f"cp {ROOT_DIR}/student/* {SUBMISSION_DIR} 2> /dev/null")
+        student_dir = ROOT_DIR / "student"
+        if student_dir.exists():
+            copy_directory_contents(student_dir, SUBMISSION_DIR)
 
         # copy student submission from /grade/data/data.json
         #   into the end of f"{SUBMISSION_DIR}/_submission_file"
@@ -141,27 +146,50 @@ def prep_submission():
         sub_data = get_at_path(
             submission_data, resolve_submission_path(submission_data, grading_info)
         )
+        assert isinstance(sub_data, str)
 
-        with open(f"{SUBMISSION_DIR}/_submission_file", "w") as sub:
+        with (SUBMISSION_DIR / "_submission_file").open("w") as sub:
             sub.write(grading_info.get("pre-text", ""))
             sub.write(sub_data)
             sub.write(grading_info.get("post-text", ""))
 
 
-def ls_vars(directory: str = VARS_DIR):
+def copy_directory_contents(source: Path, destination: Path):
+    if not source.exists():
+        return
+
+    for item in source.iterdir():
+        target = destination / item.name
+        if item.is_dir():
+            shutil.copytree(item, target, dirs_exist_ok=True)
+        else:
+            shutil.copy2(item, target)
+
+
+def reset_directory_contents(directory: Path):
+    for item in directory.iterdir():
+        if item.is_dir():
+            shutil.rmtree(item)
+        else:
+            item.unlink()
+
+
+def ls_vars(directory: Path = VARS_DIR):
     """get the folder names that match VAR_REGEX"""
-    yield from filter(lambda name: re_match(VAR_REGEX, name), os.listdir(directory))
+    yield from (
+        path.name for path in directory.iterdir() if re_match(VAR_REGEX, path.name)
+    )
 
 
 def load_var(var_name: str, solution: bool) -> Var:
     """Empties the working directory, copies in the necessary files
     from common/, the variant, and the submission"""
     # nuke working directory
-    os.system(f"rm -rf {WORK_DIR}/*")
+    reset_directory_contents(WORK_DIR)
     # copy common files
-    os.system(f"cp -r {VARS_DIR}/common/* {WORK_DIR}")
+    copy_directory_contents(VARS_DIR / "common", WORK_DIR)
     # copy in files from the variant
-    os.system(f"cp -r {VARS_DIR}/{var_name}/* {WORK_DIR}")
+    copy_directory_contents(VARS_DIR / var_name, WORK_DIR)
 
     # copy the submitted files
     if solution:
@@ -170,14 +198,19 @@ def load_var(var_name: str, solution: bool) -> Var:
         sub_dir = SUBMISSION_DIR
 
     ## append the submitted code snippet
-    os.system(
-        f"cat {sub_dir}/_submission_file >> {WORK_DIR}/{grading_info['submission_file']}"
-    )
+    with (sub_dir / "_submission_file").open("r") as submission_file:
+        with (WORK_DIR / grading_info["submission_file"]).open("a") as grading_file:
+            grading_file.write(submission_file.read())
     ## and all additionally submitted files
     if "submission_root" in grading_info.keys():
-        os.system(f"cp {sub_dir}/* {WORK_DIR}/{grading_info['submission_root']}/")
+        copy_directory_contents(sub_dir, WORK_DIR / grading_info["submission_root"])
     ## but we accidentally copy in the submission again, so let's remove that
-    os.system(f"rm {WORK_DIR}/{grading_info['submission_root']}/_submission_file")
+    if "submission_root" in grading_info.keys():
+        submission_copy = (
+            WORK_DIR / grading_info["submission_root"] / "_submission_file"
+        )
+        if submission_copy.exists():
+            submission_copy.unlink()
 
 
 def run_var(var_name: str, solution: bool) -> Tuple[Var, str]:
@@ -188,15 +221,22 @@ def run_var(var_name: str, solution: bool) -> Tuple[Var, str]:
     vname = vname.capitalize()  # fix capitalization ("hello_There" -> "Hello_there")
     vname = vname.replace("_", " ")
 
-    os.popen(f"cd {WORK_DIR} && {PRE_SCRIPT}")
-    output = os.popen(f"cd {WORK_DIR} && {GRADING_SCRIPT}").read()
+    subprocess.run(PRE_SCRIPT, cwd=WORK_DIR, shell=True, check=False)
+    output = subprocess.run(
+        GRADING_SCRIPT,
+        cwd=WORK_DIR,
+        shell=True,
+        check=False,
+        capture_output=True,
+        text=True,
+    ).stdout
     verification = verifyOutput(output)
 
-    def panic(var_name: str, stdout: str) -> None:
+    def panic(var_name: str, stdout: str):
         suite = "instructor" if solution else "student"
         print(f'Error when running variant "{var_name}" on {suite} suite. Output:')
         print(f"> {stdout}")
-        sys.exit(1)
+        return sys.exit(1)
 
     # if not solution:
     #     print(f"Contents of {WORK_DIR}/spec/giftcard_spec.rb")
@@ -210,11 +250,11 @@ def run_var(var_name: str, solution: bool) -> Tuple[Var, str]:
 
 
 if __name__ == "__main__":
-
-    if not os.path.exists(out_path := f"{ROOT_DIR}/results"):
-        os.mkdir(out_path)
+    out_path = ROOT_DIR / "results"
+    if not out_path.exists():
+        out_path.mkdir()
     # in case something goes wrong, write "ungradable" until a full grading run is done
-    with open(RESULTS_FILE, "w") as results:
+    with RESULTS_FILE.open("w") as results:
         json_data: str = json_dumps(
             {
                 "gradable": False,
@@ -228,7 +268,7 @@ if __name__ == "__main__":
     try:
         do_assertions()
     except Exception as e:
-        with open(RESULTS_FILE, "w") as results:
+        with RESULTS_FILE.open("w") as results:
             json_data: str = json_dumps(
                 {
                     "gradable": False,
@@ -252,7 +292,7 @@ if __name__ == "__main__":
     try:
         prep_submission()
     except SubmissionPathError as error:
-        with open(RESULTS_FILE, "w") as results:
+        with RESULTS_FILE.open("w") as results:
             json_data: str = json_dumps(
                 {
                     "gradable": False,
@@ -300,7 +340,7 @@ if __name__ == "__main__":
         print("No gradable test-mutant pairs found!")
         gradingData["score"] = 0
 
-    with open(RESULTS_FILE, "w") as results:
+    with RESULTS_FILE.open("w") as results:
         json_data: str = json_dumps(gradingData)
         # print("Returned grading data:")
         # pprint(gradingData)
