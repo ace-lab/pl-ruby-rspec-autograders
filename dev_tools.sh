@@ -11,9 +11,12 @@ infer_image() {
         rspec)
             printf '%s\n' "pl-rspec-autograder"
             ;;
+        variant)
+            printf '%s\n' "pl-variant-autograder"
+            ;;
         *)
             echo "Error: could not infer IMAGE from $(pwd)." 1>&2
-            echo "Run dev_tools.sh from the ruby/ or rspec/ subdirectory." 1>&2
+            echo "Run dev_tools.sh from the ruby/, rspec/, or variant/ subdirectory." 1>&2
             return 1
             ;;
     esac
@@ -113,7 +116,7 @@ run_image() { # run $IMAGE:dev as `autograder_test`
             2>"$stderr_file" \
             1>"$stdout_file" & )
     sleep 1
-    docker container ls | indent 2
+    docker container ls --filter "name=^/${container}$" | indent 2
     code="$(docker container wait "$container")"
     echo \> Container exited with code $code | indent 2
     if [[ $code != "0" ]]; then
