@@ -312,7 +312,7 @@ if __name__ == "__main__":
         ref_var, ref_out = run_var(var_name=var, solution=True)
         sub_var, sub_out = run_var(var_name=var, solution=False)
 
-        report = Var.grade(ref_var, sub_var)
+        report = Var.grade(reference=ref_var, submission=sub_var)
 
         for testID, data in report.items():
             out[testID] = {

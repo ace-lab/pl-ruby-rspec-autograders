@@ -1,76 +1,73 @@
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
+from dataclasses import dataclass, field
 
 VALID_EXPECTATION_ERRORS = (
     "RSpec::Expectations::ExpectationNotMetError",
     "RSpec::Mocks::MockExpectationError",
 )
 
+
+@dataclass(frozen=True)
 class Failure(object):
-    def __init__(self, exception: str, err_msg: str, backtrace: List[str]) -> None:
-        self.exception = exception
-        self.err_msg = err_msg
-        self.backtrace = backtrace
+    exception: str
+    err_msg: str = field(compare=False)
+    backtrace: List[str] = field(compare=False)
 
-    def asdict(self) -> Dict[str, str]:
-        return {
-            'error_message' : self.err_msg,
-            'exception' : self.exception
-        }
-
-    def __eq__(self, o) -> bool:
-        same_ex = self.exception == o.exception
-        
-        return same_ex # and same_stack # maybe include stack ?
-
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         return f"Failure({self.exception}: {self.err_msg})"
 
-class Test(object):
-    def __init__(self, desc: str, fail: Failure) -> None:
-        # self.id = id
-        self.description = desc
-        self.passed = fail is None
-        self.failure = fail
 
-    def __repr__(self) -> str:
-        base = f"{self.description}: {'passed' if self.passed else 'failed'}"
-        return base #+ ("pass" if self.passed else f"{self.failure}")
+@dataclass(frozen=True)
+class Test:
+    description: str
+    failure: Optional[Failure] = None
 
-class Var(object):
-    def __init__(self, tests: Dict[str, Test], id: str, feedback_banner: str = "") -> None:
-        self.tests: Dict[str, Test] = tests
-        self.id: str = id
-        self.feedback_banner: str = f"\n{feedback_banner}\n"
+    @property
+    def passed(self):
+        return self.failure is None
 
-    def __repr__(self) -> str:
-        # if len(self.tests) > 0:
-        info_str = '\n\t' +'\n\t'.join([f"{test}" for test in self.tests])
-        # else:
-            # info_str = ' "Failed to Unexpected Error"'
+    def __str__(self) -> str:
+        return f"{self.description}: {'passed' if self.passed else 'failed'}"
+
+
+def first_line(s: str) -> str:
+    i = s.find("\n")
+    if i < 0:
+        return s
+    return s[:i]
+
+
+@dataclass(frozen=True)
+class Var:
+    tests: Dict[str, Test]
+    id: str
+    feedback_banner: str = ""
+
+    def __str__(self) -> str:
+        info_str = "\n\t" + "\n\t".join([f"{test}" for test in self.tests])
         return f"Var({self.id},{info_str}\n)"
 
     def get_feedback_prefix(self) -> str:
         if self.feedback_banner.strip() == "":
             return self.id
-        return f"{self.id} ({self.feedback_banner})"
+        return f"{self.id} (\n{self.feedback_banner}\n)"
 
-    def grade(self, reference) -> Dict:
-        return Var.grade(self, reference)
-
-    @classmethod
-    def grade(cls, reference, submission) -> Dict:
+    @staticmethod
+    def grade(*, reference: "Var", submission: "Var") -> Dict:
         """Produce a scoring report from two Variants, first as reference, second as submission"""
-        out = { }
+        out = {}
 
-        for testID in reference.tests.keys():
-            ref: Test = reference.tests.get(testID)
-            sub: Test = submission.tests.get(testID)
-            
+        for testID, ref in reference.tests.items():
+            sub = submission.tests.get(testID)
+
             # if the reference test was not responsible for killing this variant, don't grade
-            if ref.passed or ref.failure.exception not in VALID_EXPECTATION_ERRORS:
+            if (
+                ref.failure is None
+                or ref.failure.exception not in VALID_EXPECTATION_ERRORS
+            ):
                 continue
-            
-            out[testID] = { 'correct' : False }
+
+            out[testID] = {"correct": False}
 
             # cases in order:
             #   Student did not submit test case
@@ -78,24 +75,32 @@ class Var(object):
             #   Student test fails, but not due to an assertion
             #   Student test fails by wrong assertion
 
-            if sub is None: 
-                msg = ("Test not found\n" + submission.feedback_banner).strip() + "\n"
-
-            elif sub.passed:
-                msg = f"Should fail but passed\n"
-
-            elif sub.failure.exception != ref.failure.exception:
-                student_err_msg = sub.failure.err_msg.split('\n')[0].replace("with backtrace:", "")
-                msg = f"Failed to unexpected error\n> {student_err_msg}\n"
-
-            elif sub.failure.err_msg.split('\n')[0] != ref.failure.err_msg.split('\n')[0]:
-                student_err_msg = sub.failure.err_msg.split('\n')[0].replace("with backtrace:", "")
-                msg = f"Failed by wrong assertion\n> {student_err_msg}\n"
+            if sub is None:
+                msg = ("Test not found\n" + submission.feedback_banner).strip()
 
             else:
-                msg = f"Failed as intended\n"
-                out[testID]['correct'] = True
+                msg = diff_test_failures(ref_fail=ref.failure, sub_fail=sub.failure)
+                if msg is None:
+                    msg = 'Failed as intended'
+                    out[testID]["correct"] = True
 
-            out[testID].update({ "message" : msg })
+            out[testID].update({"message": msg + '\n'})
 
         return out
+
+
+def diff_test_failures(*, ref_fail: Failure, sub_fail: Optional[Failure]) -> Optional[str]:
+    if sub_fail is None:
+        return f"Should fail but passed"
+
+    sub_fail_err_first = first_line(sub_fail.err_msg)
+
+    if sub_fail.exception != ref_fail.exception:
+        student_err_msg = sub_fail_err_first.replace("with backtrace:", "")
+        return f"Failed to unexpected error\n> {student_err_msg}"
+
+    if sub_fail_err_first != first_line(ref_fail.err_msg):
+        student_err_msg = sub_fail_err_first.replace("with backtrace:", "")
+        return f"Failed by wrong assertion\n> {student_err_msg}"
+
+    return None
