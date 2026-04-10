@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 from dataclasses import dataclass, field
 
 VALID_EXPECTATION_ERRORS = (
@@ -46,7 +46,7 @@ class Failure:
 
 
 @dataclass(frozen=True)
-class Test:
+class TestResult:
     description: str
     failure: Optional[Failure] = None
 
@@ -59,14 +59,14 @@ class Test:
 
 
 @dataclass(frozen=True)
-class Var:
-    tests: Dict[str, Test]
+class VariantResult:
+    tests: Dict[str, TestResult]
     id: str
     feedback_banner: str = ""
 
     def __str__(self) -> str:
         info_str = "\n\t" + "\n\t".join([f"{test}" for test in self.tests])
-        return f"Var({self.id},{info_str}\n)"
+        return f"VariantResult({self.id},{info_str}\n)"
 
     def get_feedback_prefix(self) -> str:
         if self.feedback_banner.strip() == "":
@@ -74,7 +74,9 @@ class Var:
         return f"{self.id} (\n{self.feedback_banner}\n)"
 
     @staticmethod
-    def grade(*, reference: "Var", submission: "Var") -> Dict:
+    def grade(
+        *, reference: "VariantResult", submission: "VariantResult"
+    ) -> Dict[str, Dict[Literal["correct", "message"], str]]:
         """Produce a scoring report from two Variants, first as reference, second as submission"""
         out = {}
 
