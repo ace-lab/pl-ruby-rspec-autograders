@@ -7,14 +7,42 @@ VALID_EXPECTATION_ERRORS = (
 )
 
 
+def first_line(s: str) -> str:
+    i = s.find("\n")
+    if i < 0:
+        return s
+    return s[:i]
+
+
 @dataclass(frozen=True)
-class Failure(object):
+class Failure:
     exception: str
     err_msg: str = field(compare=False)
     backtrace: List[str] = field(compare=False)
 
     def __str__(self) -> str:
         return f"Failure({self.exception}: {self.err_msg})"
+
+    @staticmethod
+    def diff(*, ref: "Failure", sub: "Optional[Failure]") -> Optional[str]:
+        # cases:
+        #   Student test did not kill mutant (but instructor did)
+        if sub is None:
+            return f"Should fail but passed"
+
+        sub_fail_err_first = first_line(sub.err_msg)
+
+        #   Student test fails, but not due to an assertion
+        if sub.exception != ref.exception:
+            student_err_msg = sub_fail_err_first.replace("with backtrace:", "")
+            return f"Failed to unexpected error\n> {student_err_msg}"
+
+        #   Student test fails by wrong assertion
+        if sub_fail_err_first != first_line(ref.err_msg):
+            student_err_msg = sub_fail_err_first.replace("with backtrace:", "")
+            return f"Failed by wrong assertion\n> {student_err_msg}"
+
+        return None
 
 
 @dataclass(frozen=True)
@@ -28,13 +56,6 @@ class Test:
 
     def __str__(self) -> str:
         return f"{self.description}: {'passed' if self.passed else 'failed'}"
-
-
-def first_line(s: str) -> str:
-    i = s.find("\n")
-    if i < 0:
-        return s
-    return s[:i]
 
 
 @dataclass(frozen=True)
@@ -58,49 +79,23 @@ class Var:
         out = {}
 
         for testID, ref in reference.tests.items():
-            sub = submission.tests.get(testID)
-
             # if the reference test was not responsible for killing this variant, don't grade
-            if (
-                ref.failure is None
-                or ref.failure.exception not in VALID_EXPECTATION_ERRORS
-            ):
+            if ref.failure is None:
                 continue
 
-            out[testID] = {"correct": False}
+            if ref.failure.exception not in VALID_EXPECTATION_ERRORS:
+                continue
 
-            # cases in order:
-            #   Student did not submit test case
-            #   Student test did not kill mutant (but instructor did)
-            #   Student test fails, but not due to an assertion
-            #   Student test fails by wrong assertion
+            sub = submission.tests.get(testID)
 
             if sub is None:
-                msg = ("Test not found\n" + submission.feedback_banner).strip()
-
+                correct = False
+                msg = f"Test not found\n\n{submission.feedback_banner}".strip()
             else:
-                msg = diff_test_failures(ref_fail=ref.failure, sub_fail=sub.failure)
-                if msg is None:
-                    msg = 'Failed as intended'
-                    out[testID]["correct"] = True
+                diff = Failure.diff(ref=ref.failure, sub=sub.failure)
+                correct = diff is None
+                msg = diff or "Failed as intended"
 
-            out[testID].update({"message": msg + '\n'})
+            out[testID] = {"correct": correct, "message": msg + "\n"}
 
         return out
-
-
-def diff_test_failures(*, ref_fail: Failure, sub_fail: Optional[Failure]) -> Optional[str]:
-    if sub_fail is None:
-        return f"Should fail but passed"
-
-    sub_fail_err_first = first_line(sub_fail.err_msg)
-
-    if sub_fail.exception != ref_fail.exception:
-        student_err_msg = sub_fail_err_first.replace("with backtrace:", "")
-        return f"Failed to unexpected error\n> {student_err_msg}"
-
-    if sub_fail_err_first != first_line(ref_fail.err_msg):
-        student_err_msg = sub_fail_err_first.replace("with backtrace:", "")
-        return f"Failed by wrong assertion\n> {student_err_msg}"
-
-    return None
