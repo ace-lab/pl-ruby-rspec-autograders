@@ -1,6 +1,6 @@
 {
     "submission_file": "script.rb",
     "submission_root": "",
-    "submit_to_line" : -1
+    "submit_to_line" : -1,
+    "answers_name": "test-answer-name"
 }
-

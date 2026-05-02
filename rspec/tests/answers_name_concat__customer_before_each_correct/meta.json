@@ -4,7 +4,7 @@
     "pre-text": "describe Customer do\n  describe 'trying to buy' do\n",
     "post-text": "  end\nend\n",
     "data_path" : [
-        "ansnmsubmitted_answers",
-        "student-parsons-solution"
+        "test-answer-namesubmitted_answers",
+        "test-answer-name"
     ]
 }

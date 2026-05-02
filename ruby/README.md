@@ -23,17 +23,18 @@ Assuming you have Prairielearn up and running locally (if not see [Installing PL
     "submission_file": "file/to/submit/to.rb",
     "submission_root": "location/to/submit/additional/files/",
     "submit_to_line" : 3,
-    "pre-text" : "any lines to precede\n  the student's submission\n", 
+    "pre-text" : "any lines to precede\n  the student's submission\n",
     "post-text": "any lines to succeed\n  the student's submission\n",
+    "answers_name": "optional-fpp-answers-name"
 }
 ```
-*Note that the key `submission_root` is optional, as the feature that requires it is not yet implemented as of 21 Aug 2023
+*Note that `submission_root` is optional, as the feature that requires it is not yet implemented as of 21 Aug 2023. `answers_name` is optional when the autograder can infer the canonical faded parsons submission path from `raw_submitted_answers`, but is required when one question contains multiple `pl-faded-parsons` elements and the autograder should grade a specific one.
 
 3) In the `tests/` directory in your question, include the complete application that the student submits to
-   in `tests/app/`. Note: do not include the text included in `meta.json`'s `"pre-text"` and `"post-text"` 
+   in `tests/app/`. Note: do not include the text included in `meta.json`'s `"pre-text"` and `"post-text"`
    fields as those will be inserted during grading.
 
-4) Also in the `tests/` directory, include the instructor's solution (excluding the `"pre-text"` and 
+4) Also in the `tests/` directory, include the instructor's solution (excluding the `"pre-text"` and
    `"post-text"` fields) in a file named `solution` (with no file extension).
 
 5) If you are not using the [Faded Parsons Element](https://github.com/ace-lab/pl-faded-parsons), include a python script called `submission_processing.py` in `tests/` (`tests/submission_processing.py`) with a function `get_submission(data: Dict) -> str`. This function takes in the entire submission data object and should return the student's submission as plaintext. You can see a [simple example](https://github.com/ace-lab/pl-ruby-rspec-autograders/blob/main/ruby/tests/no_file_submission/submission_processing.py#L4-L10) in the tests in this repository.
@@ -42,7 +43,8 @@ Assuming you have Prairielearn up and running locally (if not see [Installing PL
 
 1. The autograder checks if a file named `tests/submission_processing.py` was passed.
     - If so, it tries to import a function with the signature ```get_submission(data: Dict) -> str``` that takes in the submission data and returns the student's submission as plaintext
-    - If not, the autograder extracts the student submission from `data['submitted_answers"]["student-parsons-solution"]`
+    - If not, the autograder looks for the canonical faded parsons submission at `data['submitted_answers'][answers-name]`, auto-detecting `answers-name` from `raw_submitted_answers` when possible.
+    - If that is ambiguous or cannot be inferred, set `"answers_name"` or `"data_path"` in `tests/meta.json`, or provide `tests/submission_processing.py`.
 2. The autograder then writes the student submission along with the pre-text and post-text (in `meta.json`) to the submission_file (in `meta.json`) at the line provided (in `meta.json`) to the application in `tests/app`.
 3. Then RSpec is run on the application and the test results are gathered.
    - If there is an issue running RSpec, the output of `rspec --format json` is printed to the console hosting PL and the autograder exits, marking the submission ungradable.

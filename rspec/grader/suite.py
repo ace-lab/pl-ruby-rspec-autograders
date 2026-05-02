@@ -1,101 +1,110 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
+from dataclasses import dataclass, field
 
 VALID_EXPECTATION_ERRORS = (
     "RSpec::Expectations::ExpectationNotMetError",
     "RSpec::Mocks::MockExpectationError",
 )
 
-class Failure(object):
-    def __init__(self, exception: str, err_msg: str, backtrace: List[str]) -> None:
-        self.exception = exception
-        self.err_msg = err_msg
-        self.backtrace = backtrace
 
-    def asdict(self) -> Dict[str, str]:
-        return {
-            'error_message' : self.err_msg,
-            'exception' : self.exception
-        }
+def first_line(s: str) -> str:
+    i = s.find("\n")
+    if i < 0:
+        return s
+    return s[:i]
 
-    def __eq__(self, o) -> bool:
-        same_ex = self.exception == o.exception
-        
-        return same_ex # and same_stack # maybe include stack ?
 
-    def __repr__(self) -> str:
+@dataclass(frozen=True)
+class Failure:
+    exception: str
+    err_msg: str = field(compare=False)
+    backtrace: List[str] = field(compare=False)
+
+    def __str__(self) -> str:
         return f"Failure({self.exception}: {self.err_msg})"
 
-class Test(object):
-    def __init__(self, desc: str, fail: Failure) -> None:
-        # self.id = id
-        self.description = desc
-        self.passed = fail is None
-        self.failure = fail
+    @staticmethod
+    def diff(*, ref: "Failure", sub: "Optional[Failure]") -> Optional[str]:
+        # cases:
+        #   Student test did not kill mutant (but instructor did)
+        if sub is None:
+            return f"Should fail but passed"
 
-    def __repr__(self) -> str:
-        base = f"{self.description}: {'passed' if self.passed else 'failed'}"
-        return base #+ ("pass" if self.passed else f"{self.failure}")
+        sub_fail_err_first = first_line(sub.err_msg)
 
-class Var(object):
-    def __init__(self, tests: Dict[str, Test], id: str, feedback_banner: str = "") -> None:
-        self.tests: Dict[str, Test] = tests
-        self.id: str = id
-        self.feedback_banner: str = f"\n{feedback_banner}\n"
+        #   Student test fails, but not due to an assertion
+        if sub.exception != ref.exception:
+            student_err_msg = sub_fail_err_first.replace("with backtrace:", "")
+            return f"Failed to unexpected error\n> {student_err_msg}"
 
-    def __repr__(self) -> str:
-        # if len(self.tests) > 0:
-        info_str = '\n\t' +'\n\t'.join([f"{test}" for test in self.tests])
-        # else:
-            # info_str = ' "Failed to Unexpected Error"'
-        return f"Var({self.id},{info_str}\n)"
+        #   Student test fails by wrong assertion
+        if sub_fail_err_first != first_line(ref.err_msg):
+            student_err_msg = sub_fail_err_first.replace("with backtrace:", "")
+            return f"Failed by wrong assertion\n> {student_err_msg}"
+
+        return None
+
+
+@dataclass(frozen=True)
+class TestResult:
+    description: str
+    failure: Optional[Failure] = None
+
+    @property
+    def passed(self):
+        return self.failure is None
+
+    def __str__(self) -> str:
+        return f"{self.description}: {'passed' if self.passed else 'failed'}"
+
+
+
+@dataclass(frozen=True)
+class VariantResult:
+    tests: Dict[str, TestResult]
+    id: str
+    feedback_banner: str = ""
+
+    def __str__(self) -> str:
+        info_str = "\n\t" + "\n\t".join([f"{test}" for test in self.tests])
+        return f"VariantResult({self.id},{info_str}\n)"
 
     def get_feedback_prefix(self) -> str:
         if self.feedback_banner.strip() == "":
             return self.id
-        return f"{self.id} ({self.feedback_banner})"
+        return f"{self.id} (\n{self.feedback_banner}\n)"
 
-    def grade(self, reference) -> Dict:
-        return Var.grade(self, reference)
+    @dataclass
+    class Feedback:
+        output: str = ""
+        points: int = 0
+        max_points: int = 0
 
-    @classmethod
-    def grade(cls, reference, submission) -> Dict:
-        """Produce a scoring report from two Variants, first as reference, second as submission"""
-        out = { }
+    @staticmethod
+    def grade(
+        *, reference: "VariantResult", submission: "VariantResult"
+    ) -> Dict[str, 'VariantResult.Feedback']:
+        """Produce a scoring report from two Variants, first as reference, second as submission. Everything is graded 0/1 or 1/1."""
+        out = {}
 
-        for testID in reference.tests.keys():
-            ref: Test = reference.tests.get(testID)
-            sub: Test = submission.tests.get(testID)
-            
+        for testID, ref in reference.tests.items():
             # if the reference test was not responsible for killing this variant, don't grade
-            if ref.passed or ref.failure.exception not in VALID_EXPECTATION_ERRORS:
+            if ref.failure is None:
                 continue
-            
-            out[testID] = { 'correct' : False }
 
-            # cases in order:
-            #   Student did not submit test case
-            #   Student test did not kill mutant (but instructor did)
-            #   Student test fails, but not due to an assertion
-            #   Student test fails by wrong assertion
+            if ref.failure.exception not in VALID_EXPECTATION_ERRORS:
+                continue
 
-            if sub is None: 
-                msg = ("Test not found\n" + submission.feedback_banner).strip() + "\n"
+            sub = submission.tests.get(testID)
 
-            elif sub.passed:
-                msg = f"Should fail but passed\n"
-
-            elif sub.failure.exception != ref.failure.exception:
-                student_err_msg = sub.failure.err_msg.split('\n')[0].replace("with backtrace:", "")
-                msg = f"Failed to unexpected error\n> {student_err_msg}\n"
-
-            elif sub.failure.err_msg.split('\n')[0] != ref.failure.err_msg.split('\n')[0]:
-                student_err_msg = sub.failure.err_msg.split('\n')[0].replace("with backtrace:", "")
-                msg = f"Failed by wrong assertion\n> {student_err_msg}\n"
-
+            if sub is None:
+                correct = False
+                msg = f"Test not found\n\n{submission.feedback_banner}".strip()
             else:
-                msg = f"Failed as intended\n"
-                out[testID]['correct'] = True
+                diff = Failure.diff(ref=ref.failure, sub=sub.failure)
+                correct = diff is None
+                msg = diff or "Failed as intended"
 
-            out[testID].update({ "message" : msg })
+            out[testID] = VariantResult.Feedback(msg, int(correct), 1)
 
         return out

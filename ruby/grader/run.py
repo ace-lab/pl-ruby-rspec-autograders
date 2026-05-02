@@ -15,14 +15,63 @@ ROOT_DIR = "/grade"
 
 WORK_DIR = f"{ROOT_DIR}/working/"
 APP_DIR = f"{ROOT_DIR}/tests/app/"
-
 class SolutionError(Exception):
     """Provided solution is not valid"""
 
-def get_submission(data: Dict) -> str:
-    """Get the student's submission as a plain-text string from data.json  
-    If `tests/submission_processing.py` does not exist, load straight from 
-    `["submitted_answers"]["student-parsons-solution"]`"""
+class SubmissionPathError(Exception):
+    """Could not locate the student submission in data.json"""
+
+def get_at_path(data: Dict, path) -> str:
+    try:
+        current = data
+        for path_item in path:
+            current = current[path_item]
+        return current
+    except KeyError as error:
+        raise SubmissionPathError(
+            f"Could not locate the student submission at data path {path}."
+        ) from error
+
+def infer_faded_parsons_submission_path(data: Dict):
+    """Resolve the canonical faded parsons submission path from raw submitted inputs."""
+    raw_answers = data.get('raw_submitted_answers', {})
+    submitted_answers = data.get('submitted_answers', {})
+    answers_names = sorted({
+        key[:-len('.main')]
+        for key in raw_answers.keys()
+        if key.endswith('.main') and key[:-len('.main')] in submitted_answers
+    })
+
+    if len(answers_names) == 1:
+        return ['submitted_answers', answers_names[0]]
+    if len(answers_names) > 1:
+        raise SubmissionPathError(
+            "Multiple pl-faded-parsons submissions found. Add "
+            "'answers_name' or 'data_path' to tests/meta.json."
+        )
+    return None
+
+def resolve_submission_path(data: Dict, grading_info: Dict):
+    if 'data_path' in grading_info:
+        return grading_info['data_path']
+    if 'answers_name' in grading_info:
+        return ['submitted_answers', grading_info['answers_name']]
+
+    inferred_path = infer_faded_parsons_submission_path(data)
+    if inferred_path is not None:
+        return inferred_path
+
+    raise SubmissionPathError(
+        "Could not infer a submission path. Add 'answers_name' or 'data_path' "
+        "to tests/meta.json, or provide tests/submission_processing.py."
+    )
+
+def get_submission(data: Dict, grading_info: Dict) -> str:
+    """Get the student's submission as a plain-text string from data.json.
+
+    If `tests/submission_processing.py` does not exist, use the canonical
+    faded parsons path `["submitted_answers"][answers-name]`.
+    """
 
     if os.path.isfile('/grade/tests/submission_processing.py'):
         loader = importlib.machinery.SourceFileLoader(
@@ -30,7 +79,7 @@ def get_submission(data: Dict) -> str:
         module = loader.load_module()
         return module.get_submission(data)
 
-    return data['submitted_answers']['student-parsons-solution']
+    return get_at_path(data, resolve_submission_path(data, grading_info))
 
 def write_to(content: str, out_file: str, line: int = -1) -> None:
     """Write `content` to line `line` of file `to`"""
@@ -122,7 +171,7 @@ def main():
     try:
         sub: Suite = run(
             grading_info.get('pre-text', '') + "\n" +
-                get_submission(submission_data) + "\n" +
+                get_submission(submission_data, grading_info) + "\n" +
                 grading_info.get('post-text', ''),
             grading_info,
             solution=False
@@ -141,6 +190,11 @@ def main():
         grading_data['score'] = pts / max_pts
 
         print("Submission graded", perf_counter() - start_time)
+    except SubmissionPathError as error:
+        grading_data['format_errors'] = f"Instructor Error: {error.args[0]}"
+        grading_data['gradable'] = False
+
+        print("Submission path resolution failed")
     except exe.ExecutionError as error:
         grading_data['format_errors'] = error.args[0]
         grading_data['gradable'] = False
@@ -207,7 +261,7 @@ else:
 
         load_system(
             grading_info.get('pre-text', '') + "\n" +
-                submission_data['submitted_answers']['student-parsons-solution'] + "\n" +
+                get_submission(submission_data, grading_info) + "\n" +
                 grading_info.get('post-text', ''),
             solution=False
         )

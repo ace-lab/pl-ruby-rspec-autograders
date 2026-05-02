@@ -1,4 +1,5 @@
 {
     "submission_file" : "spec/funcs_spec.rb",
-    "submission_root" : ""
+    "submission_root" : "",
+    "answers_name": "test-answer-name"
 }
