@@ -24,6 +24,7 @@ METADATA_FILE = VARS_DIR / "meta.json"
 VAR_GLOB: str = "var_*"
 # this will be made when this script is run
 WORK_DIR = ROOT_DIR / "working"
+DEBUG = False
 
 DataPath = Sequence[str]
 DataDict = dict[str, "str | DataDict"]
@@ -155,10 +156,32 @@ def prepare_submission_directory(submission, metadata):
         sub_data = get_at_path(submission, resolve_path(submission, metadata))
         assert isinstance(sub_data, str)
 
+        pre_text = metadata.get("pre-text", "")
+        post_text = metadata.get("post-text", "")
+        if pre_text and not pre_text.endswith("\n"):
+            pre_text = pre_text + "\n"
+        if post_text and not post_text.startswith("\n"):
+            post_text = "\n" + post_text
+
+        if DEBUG:
+            print("DEBUG prepare_submission_directory")
+            print("DEBUG submission path:", resolve_path(submission, metadata))
+            print("DEBUG pre-text:", repr(pre_text))
+            print("DEBUG student submission:", repr(sub_data))
+            print("DEBUG post-text:", repr(post_text))
+            print(
+                "DEBUG combined submission:",
+                repr(
+                    pre_text
+                    + sub_data
+                    + post_text
+                ),
+            )
+
         with (SUBMISSION_DIR / "_submission_file").open("w") as sub:
-            sub.write(metadata.get("pre-text", ""))
+            sub.write(pre_text)
             sub.write(sub_data)
-            sub.write(metadata.get("post-text", ""))
+            sub.write(post_text)
 
 
 def copy_directory_contents(source: Path, destination: Path):
@@ -206,6 +229,11 @@ def load_var(var_name: str, sub_metadata: Dict, solution: bool):
     with (sub_dir / "_submission_file").open("r") as submission_file:
         with (WORK_DIR / sub_metadata["submission_file"]).open("a") as grading_file:
             grading_file.write(submission_file.read())
+    if DEBUG:
+        print("DEBUG working file:", WORK_DIR / sub_metadata["submission_file"])
+        with (WORK_DIR / sub_metadata["submission_file"]).open("r") as grading_file:
+            print("DEBUG working file contents:")
+            print(grading_file.read())
     ## and all additionally submitted files
     if "submission_root" in sub_metadata.keys():
         copy_directory_contents(sub_dir, WORK_DIR / sub_metadata["submission_root"])
@@ -235,6 +263,9 @@ def run_var(var_name: str, sub_metadata: Dict, solution: bool):
         capture_output=True,
         text=True,
     ).stdout
+    if DEBUG:
+        print("DEBUG rspec output:")
+        print(output)
     verification = verifyOutput(output)
 
     # if not solution:
